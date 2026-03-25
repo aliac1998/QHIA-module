@@ -204,7 +204,7 @@ Similar to PA, we will use `all-cause-mortality` exposure response function for 
 
 ```{r}
 
-all_cause_ap <- read_csv(here("inst/extdata/global/dose_response/drap/extdata/all_cause_ap.csv"))
+all_cause_ap <- read_csv(here("../ITHIM-R/inst/extdata/global/dose_response/drap/extdata/all_cause_ap.csv"))
 
 
 ggplot(all_cause_ap) +
