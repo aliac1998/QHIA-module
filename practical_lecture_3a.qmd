@@ -343,18 +343,17 @@ head(travel_mmets)
 Bring background PA volume from `base_pop` dataset
 
 ```{r}
-# Create mmet per person variable that brings in background PA volume from `base_pop` dataset
-# mmets_pp <- travel_mmets |> 
-#   ## join it with participant id and bring the `work_ltpa_marg_met` column
-#   ## that stores background PA for each individual
-#   left_join(io$bogota$base_pop |> dplyr::select(participant_id, work_ltpa_marg_met))
+# Create mmet per person variable that brings in background PA volume from `base_pop` dataset. Use that as the starting point since it has people without travel as well.
 
 # Create mmet per person variable that brings in background PA volume from `base_pop` dataset
+
+# Multiply the base_pop by 2, to repeat everyone for the two scenarios, and then join it with travel_mmets
 mmets_pp <- io$bogota$base_pop %>%
     select(participant_id, work_ltpa_marg_met) %>%
     crossing(scenario = c("baseline", "sc_ped")) |> 
     left_join(travel_mmets)
 
+# For people without any trips, make their travel mmets to be zero - from NAs.
 mmets_pp$total_travel_mmets[is.na(mmets_pp$total_travel_mmets)] <- 0
 
 ```
