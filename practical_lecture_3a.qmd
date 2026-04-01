@@ -239,8 +239,7 @@ Using the `trips` dataset, a copy of the `baseline` scenario is created as follo
 ```{r}
 # get baseline trips for 15-69 year old from the io object
 trips_baseline <- trips |> 
-  filter(scenario == "baseline", 
-         participant_id > 0) 
+  filter(scenario == "baseline") 
 
 # Assign them to a new variable called trips_ped_scen
 trips_ped_scen <- trips_baseline
@@ -345,10 +344,18 @@ Bring background PA volume from `base_pop` dataset
 
 ```{r}
 # Create mmet per person variable that brings in background PA volume from `base_pop` dataset
-mmets_pp <- travel_mmets |> 
-  ## join it with participant id and bring the `work_ltpa_marg_met` column
-  ## that stores background PA for each individual
-  left_join(io$bogota$base_pop |> dplyr::select(participant_id, work_ltpa_marg_met))
+# mmets_pp <- travel_mmets |> 
+#   ## join it with participant id and bring the `work_ltpa_marg_met` column
+#   ## that stores background PA for each individual
+#   left_join(io$bogota$base_pop |> dplyr::select(participant_id, work_ltpa_marg_met))
+
+# Create mmet per person variable that brings in background PA volume from `base_pop` dataset
+mmets_pp <- io$bogota$base_pop %>%
+    select(participant_id, work_ltpa_marg_met) %>%
+    crossing(scenario = c("baseline", "sc_ped")) |> 
+    left_join(travel_mmets)
+
+mmets_pp$total_travel_mmets[is.na(mmets_pp$total_travel_mmets)] <- 0
 
 ```
 
