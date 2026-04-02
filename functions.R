@@ -3,8 +3,8 @@
 
 assignPA_RRs <- function(df, diseases, mmet_col = "mmet_ref") {
   # mmet_col: name of the column containing mMET-hours/week values.
-  #           Use "mmet_ref" for the reference scenario (default) or
-  #           "mmet_scen" for the counterfactual scenario.
+  #           Use "mmet_ref" for the reference scenario_mort (default) or
+  #           "mmet_scen" for the counterfactual scenario_mort.
   
   for (i in seq_along(diseases)) {
     
@@ -80,7 +80,7 @@ calculate_pif <- function(pop_ref, pop_scen) {
   ref_long  <- prep_pop(pop_ref)
   scen_long <- prep_pop(pop_scen)
   
-  # Join reference and scenario RRs by individual
+  # Join reference and scenario_mort RRs by individual
   pop_combined <- ref_long |>
     dplyr::rename(rr_ref = rr_pa) |>
     dplyr::left_join(
@@ -94,7 +94,7 @@ calculate_pif <- function(pop_ref, pop_scen) {
   pif_table <- pop_combined |>
     group_by(sex, age_cat, cause) |>
     summarise(
-      n            = n(),
+      n            = dplyr::n(),
       sum_rr_ref  = sum(rr_ref,  na.rm = TRUE),
       sum_rr_scen = sum(rr_scen, na.rm = TRUE),
       pif       = (sum_rr_ref - sum_rr_scen) / sum_rr_ref,
@@ -113,8 +113,8 @@ calculate_pif <- function(pop_ref, pop_scen) {
 RunLifeTable <- function(in_data, in_sex, in_mid_age, mx_trend = NA,
                          mx_trend_years = NA, scenario = 0) {
   # in_data         = mslt_general
-  # in_sex          = "male" or "female"
-  # in_mid_age      = cohort entry age (e.g. 17, 22, ..., 97)
+  # in_sex          = "female"
+  # in_mid_age      = 37
   # mx_trend        = annual % change in mortality across simulation years
   #                   NA  → no trend, use static mx
   #                   2   → 2% reduction per year  (improving survival)
@@ -155,20 +155,27 @@ RunLifeTable <- function(in_data, in_sex, in_mid_age, mx_trend = NA,
   if (is.data.frame(scenario)) {
     # lf_df <- lt_ref
     pif_df <- scenario
-    pif_col <- setdiff(names(pif_df), c("sex", "age_cat", "cause", "n", "sum_rr_ref", "sum_rr_scen"))
+    # Look for column with "mort" or "all_cause" or "pif" in name
+    pif_col <- grep("mort|all_cause|pif", names(pif_df), value = TRUE, ignore.case = TRUE)
     if (length(pif_col) == 0) {
-      stop("scenario data.frame must contain a PIF column (e.g. pif_pa)")
+      # Fallback: take first non-standard column
+      pif_col <- setdiff(names(pif_df), c("sex", "age_cat", "cause", "n", "sum_rr_ref", "sum_rr_scen"))
+      if (length(pif_col) == 0) {
+        stop("scenario data.frame must contain a PIF column (e.g. pif_pa)")
+      }
+      pif_col <- pif_col[1]
+    } else {
+      pif_col <- pif_col[1]
     }
-    pif_col <- pif_col[1]
     lf_df <- lf_df %>%
       mutate(age_cat = paste0(floor(age / 5) * 5, "-", floor(age / 5) * 5 + 4)) %>%
       left_join(
-        pif_df %>% filter(sex == in_sex) %>% select(age_cat, pif = all_of(pif_col)),
+        pif_df %>% dplyr::filter(sex == in_sex) %>% dplyr::select(age_cat, pif = all_of(pif_col)),
         by = "age_cat"
       ) %>%
       mutate(pif = as.numeric(ifelse(is.na(pif), 0, pif))) %>%
       mutate(mx = mx * (1 - pif)) %>%
-      select(-age_cat)
+      dplyr::select(-age_cat)
   } else {
     lf_df <- lf_df %>%
       mutate(mx = mx * (1 - scenario))
@@ -197,8 +204,8 @@ RunLifeTable <- function(in_data, in_sex, in_mid_age, mx_trend = NA,
   Lx <- rep(0, num_row)
   for (i in 1:(num_row - 1))
     Lx[i] = (lx[i] + lx[i + 1]) / 2
-  # terminal age: use GitHub formula
-  Lx[num_row] = lx[num_row] / lf_df$mx[num_row]
+  # terminal age
+  Lx[num_row] = lx[num_row] - dx[num_row]
   
   # life expectancy — guard against lx == 0
   ex <- rep(0, num_row)
@@ -244,9 +251,11 @@ RunDisease <- function(in_data,
                        scenario_rem    = 0    # one-off proportional reduction in remission
 ) {
   
+  # in_disease = "ishd"
+  
   # ── 1. Filter data to the requested sex and cohort entry age ───────────────
   in_data_f <- in_data %>%
-    filter(sex == in_sex, age >= in_mid_age)
+    dplyr::filter(sex == in_sex, age >= in_mid_age)
   
   num_rows <- nrow(in_data_f)
   
@@ -279,8 +288,91 @@ RunDisease <- function(in_data,
   }
   
   # ── 4. Apply scenario reductions ────────────────────────────────────────────
-  incidence_disease    <- incidence_disease  * (1 - scenario_inc)
-  case_fatality_disease <- case_fatality_base * (1 - scenario_cf)
+  # If scenario_inc is a dataframe with age_cat and pif columns, expand to single ages
+  # If scenario_inc is a vector matching incidence_disease length, use directly
+  # Otherwise apply scalar to all ages
+  scenario_inc_vec <- NULL  # initialize
+  
+  if (is.data.frame(scenario_inc) && "age_cat" %in% names(scenario_inc)) {
+    # scenario_inc is a dataframe with age_cat and pif columns - expand to single ages
+    pif_df <- scenario_inc
+    # Look for column with "inc" in name, otherwise take first non-sex/age column
+    pif_col <- grep("inc", names(pif_df), value = TRUE, ignore.case = TRUE)
+    if (length(pif_col) == 0) {
+      pif_col <- setdiff(names(pif_df), c("sex", "age_cat"))
+      pif_col <- pif_col[1]
+    } else {
+      pif_col <- pif_col[1]
+    }
+    
+    # Create age_cat for each age in the data
+    ages_vec <- in_data_f$age
+    age_cats <- paste0(floor(ages_vec / 5) * 5, "-", floor(ages_vec / 5) * 5 + 4)
+    
+    # Get PIFs for matching age categories (only for matching sex)
+    pif_matched <- pif_df %>%
+      dplyr::filter(sex == in_sex) %>%
+      dplyr::select(age_cat, pif = all_of(pif_col)) %>%
+      dplyr::mutate(age_cat = as.character(age_cat))
+    
+    # Create lookup vector - default to 0 for no match
+    pif_lookup <- pif_matched$pif
+    names(pif_lookup) <- pif_matched$age_cat
+    
+    # Match PIFs to ages using the lookup
+    scenario_inc_vec <- ifelse(age_cats %in% names(pif_lookup), 
+                               pif_lookup[age_cats], 
+                               0)
+    
+  } else if (is.vector(scenario_inc) && !is.list(scenario_inc)) {
+    # scenario_inc is a vector of PIFs - use directly (assumes same length as incidence)
+    scenario_inc_vec <- scenario_inc
+  } else {
+    # scalar - replicate for all ages
+    scenario_inc_vec <- rep(as.numeric(scenario_inc), length(incidence_disease))
+  }
+  
+  # Ensure lengths match (extend if needed)
+  if (length(scenario_inc_vec) < length(incidence_disease)) {
+    scenario_inc_vec <- rep(scenario_inc_vec, length.out = length(incidence_disease))
+  }
+  
+  # Convert to numeric if needed
+  scenario_inc_vec <- as.numeric(scenario_inc_vec)
+  
+  # Also handle scenario_cf (case fatality) similar to scenario_inc
+  scenario_cf_vec <- NULL
+  if (is.data.frame(scenario_cf) && "age_cat" %in% names(scenario_cf)) {
+    pif_df <- scenario_cf
+    # Look for column with "cf" in name, otherwise take first non-sex/age column
+    pif_col <- grep("cf", names(pif_df), value = TRUE, ignore.case = TRUE)
+    if (length(pif_col) == 0) {
+      pif_col <- setdiff(names(pif_df), c("sex", "age_cat"))
+      pif_col <- pif_col[1]
+    } else {
+      pif_col <- pif_col[1]
+    }
+    ages_vec <- in_data_f$age
+    age_cats <- paste0(floor(ages_vec / 5) * 5, "-", floor(ages_vec / 5) * 5 + 4)
+    pif_matched <- pif_df %>%
+      dplyr::filter(sex == in_sex) %>%
+      dplyr::select(age_cat, pif = all_of(pif_col)) %>%
+      dplyr::mutate(age_cat = as.character(age_cat))
+    pif_lookup <- pif_matched$pif
+    names(pif_lookup) <- pif_matched$age_cat
+    scenario_cf_vec <- ifelse(age_cats %in% names(pif_lookup), pif_lookup[age_cats], 0)
+  } else if (is.vector(scenario_cf) && !is.list(scenario_cf)) {
+    scenario_cf_vec <- scenario_cf
+  } else {
+    scenario_cf_vec <- rep(as.numeric(scenario_cf), length(case_fatality_base))
+  }
+  if (length(scenario_cf_vec) < length(case_fatality_base)) {
+    scenario_cf_vec <- rep(scenario_cf_vec, length.out = length(case_fatality_base))
+  }
+  scenario_cf_vec <- as.numeric(scenario_cf_vec)
+  
+  incidence_disease    <- incidence_disease  * (1 - scenario_inc_vec)
+  case_fatality_disease <- case_fatality_base * (1 - scenario_cf_vec)
   remission_disease    <- remission_base     * (1 - scenario_rem)
   
   # ── 5. Barendregt 1998 formulas with remission ────────────────────────────────
@@ -297,7 +389,16 @@ RunDisease <- function(in_data,
   Sx <- Cx <- Dx <- Tx <- Ax <- PYx <- px <- mx <- rep(0, number_of_ages)
   cfds <- case_fatality_disease
   
-  Sx[1] <- 1000
+  # Get prevalence at entry age from input data for initial diseased population
+  prevalence_entry <- in_data_f[[paste0("prevalence_", in_disease)]][1]
+  if (is.na(prevalence_entry) || prevalence_entry == 0) {
+    prevalence_entry <- 0
+  }
+  
+  # Initialize with some diseased population based on input prevalence
+  # This accounts for existing cases at cohort entry
+  Cx[1] <- 1000 * prevalence_entry
+  Sx[1] <- 1000 - Cx[1]
   Ax[1] <- 1000
   
   # ── 7. Propagate three-state model using Barendregt 1998 ───────────────────
@@ -338,16 +439,17 @@ RunDisease <- function(in_data,
   mx[mx < 0] <- 0
   px[first_indices] <- (Cx[last_indices] + Cx[first_indices]) / 2 / PYx[first_indices]
   
-  # Pad px, mx, and PYx to match full length (add NA for last age)
-  px[number_of_ages] <- NA
-  mx[number_of_ages] <- NA
-  PYx[number_of_ages] <- NA
+  # Set terminal age (last row) to 0
+  px[number_of_ages] <- 0
+  mx[number_of_ages] <- 0
+  PYx[number_of_ages] <- 0
   
   # ── 9. Return as data frame ────────────────────────────────────────────────
   out <- data.frame(
     age                   = in_data_f$age,
     sex                   = in_sex,
     disease               = in_disease,
+    Ax                    = Ax,   
     Sx                    = Sx,
     Cx                    = Cx,
     Dx                    = Dx,
@@ -358,9 +460,10 @@ RunDisease <- function(in_data,
     incidence_disease     = incidence_disease,
     case_fatality_disease = case_fatality_disease,
     remission_disease     = remission_disease,
-    dw                    = dw_disease
+    dw                    = dw_disease,
+    pif_applied           = scenario_inc_vec  # Store PIFs used for each age
   )
-  
+
   return(out)
 }
 
@@ -377,10 +480,10 @@ CalculationModel <- function(
     mx_trend_years  = NA,    # years to apply mx_trend  (NA = no cap)
     inc_trend_years = NA,    # years to apply inc_trend (NA = no cap)
     cf_trend_years  = NA,    # years to apply cf_trend  (NA = no cap)
-    scenario       = 0,      # direct PIF on all-cause mx (like RunLifeTable)
-    scenario_inc   = 0,      # scalar OR named vector of incidence PIFs per disease
-    scenario_cf    = 0,      # scalar OR named vector of case-fatality PIFs per disease
-    use_disease_mx = TRUE    # if TRUE  (default): disease-specific mortality changes
+    scenario  = 0,      # direct PIF on all-cause mortality (like RunLifeTable)
+    scenario_inc   = 0,      # scalar OR list (with dataframes) for incidence PIFs per disease
+    scenario_cf    = 0,      # scalar OR list (with dataframes) for case-fatality PIFs per disease
+    use_disease_mx = TRUE,   # if TRUE  (default): disease-specific mortality changes
                              #   from Step 4 feed into general life table mx.
                              # if FALSE: disease mortality feedback is suppressed —
                              #   mx in the general LT is modified only by 'scenario'
@@ -389,30 +492,63 @@ CalculationModel <- function(
                              #   the life-year effect enters through the all-cause
                              #   PIF rather than the disease-mortality pathway.
                              #   pyld is still updated from disease prevalence changes.
+    diabetes_rr_ishd = NA    # Relative risk for IHD due to diabetes (e.g., 2.82 for females, 2.16 for males)
+                             # If provided, adds PIF for IHD based on diabetes prevalence
 ) {
+  
+  ## for testing the function 
+  
+  # in_data        = mslt_general
+  # in_sex         = "female"
+  # in_mid_age     = 37
+  # mx_trend       = NA
+  # in_disease     = c("ishd", "copd", "dmt2")
+  # inc_trend      = NA
+  # cf_trend       = NA
+  # scenario       = 0
+  # scenario_inc   = list(ishd = pif_ishd_by_age, copd = 0, dmt2 = pif_dmt2_by_age)
+  # scenario_cf    = 0
+  # use_disease_mx = TRUE
+  
   
   # ── Helper: resolve per-disease scenario values ────────────────────────────
   # If scenario_inc / scenario_cf is a single scalar, replicate it for every
-  # disease. If it is a named vector, validate that all disease names are present.
+  # disease. If it is a named list, validate that all disease names are present.
+  # Each element of the list can be: scalar, vector, or dataframe (for age-specific PIFs)
   resolve_disease_scenario <- function(sc_val, diseases) {
-    if (length(sc_val) == 1) {
-      # scalar → same value for every disease
-      out <- setNames(rep(sc_val, length(diseases)), diseases)
-    } else {
-      # named vector — check all diseases are covered
+    # Handle scalar case
+    if (is.numeric(sc_val) && length(sc_val) == 1 && !is.list(sc_val)) {
+      out <- setNames(rep(list(sc_val), length(diseases)), diseases)
+    # Handle named list (disease-specific values)
+    } else if (is.list(sc_val) && !is.null(names(sc_val))) {
       missing <- setdiff(diseases, names(sc_val))
       if (length(missing) > 0) {
-        stop("scenario_inc/scenario_cf: missing disease(s) in named vector: ",
+        stop("scenario_inc/scenario_cf: missing disease(s) in named list: ",
              paste(missing, collapse = ", "),
-             "\nProvide either a single scalar or a named vector covering all diseases: ",
+             "\nProvide either a single scalar or a named list covering all diseases: ",
              paste(diseases, collapse = ", "))
       }
       out <- sc_val[diseases]
+    # Handle unnamed vector (treat as single value replicated)
+    } else if (is.vector(sc_val) && is.null(names(sc_val))) {
+      out <- setNames(rep(list(sc_val), length(diseases)), diseases)
+    } else {
+      stop("scenario_inc/scenario_cf: must be a scalar, named list, or vector")
     }
     out
   }
   
-  sc_inc_vec <- resolve_disease_scenario(scenario_inc, in_disease)
+  # If scenario_inc is named (disease-specific list with dataframes), resolve per disease.
+  # Otherwise pass it through directly (could be scalar or vector).
+  if (!is.null(names(scenario_inc)) && is.list(scenario_inc)) {
+    sc_inc_vec <- resolve_disease_scenario(scenario_inc, in_disease)
+  } else if (is.list(scenario_inc)) {
+    # Unnamed list - pass through to each disease
+    sc_inc_vec <- scenario_inc
+  } else {
+    # Scalar or vector - replicate for each disease
+    sc_inc_vec <- setNames(rep(list(scenario_inc), length(in_disease)), in_disease)
+  }
   sc_cf_vec  <- resolve_disease_scenario(scenario_cf,  in_disease)
   
   # ── Step 1: Baseline general life table ───────────────────────────────────
@@ -445,6 +581,32 @@ CalculationModel <- function(
     in_disease
   )
   message("Step 2 complete: baseline disease life tables")
+  
+  # ── Step 2b: Calculate diabetes → IHD risk factor before running scenarios ─────
+  # Calculate PIF for IHD due to diabetes prevalence using formula:
+  # PIF = (p * (RR - 1)) / (p * (RR - 1) + 1)
+  # where p = diabetes prevalence, RR = relative risk for IHD due to diabetes
+  if (!is.na(diabetes_rr_ishd) && "ishd" %in% in_disease && "dmt2" %in% in_disease) {
+    # Get baseline diabetes prevalence from disease_lt_list_bl
+    dmt2_bl <- disease_lt_list_bl[["dmt2"]]
+    
+    # Calculate PIF for IHD due to diabetes at each age
+    diabetes_ishd_pif <- dmt2_bl %>%
+      transmute(
+        age = age,
+        pif_diabetes_ishd = (px * (diabetes_rr_ishd - 1)) / (px * (diabetes_rr_ishd - 1) + 1)
+      ) %>%
+      mutate(pif_diabetes_ishd = replace_na(pif_diabetes_ishd, 0))
+    
+    # Adjust scenario_inc for IHD to include diabetes effect
+    # This modifies IHD incidence based on diabetes prevalence
+    if ("ishd" %in% names(sc_inc_vec)) {
+      # Merge with existing IHD PIF or use diabetes-only PIF
+      base_pif <- if (is.numeric(sc_inc_vec[["ishd"]])) sc_inc_vec[["ishd"]] else 0
+      sc_inc_vec[["ishd"]] <- base_pif + diabetes_ishd_pif$pif_diabetes_ishd
+    }
+    message("Step 2b complete: diabetes → IHD risk factor applied (RR = ", diabetes_rr_ishd, ")")
+  }
   
   # ── Step 3: Scenario disease life tables ──────────────────────────────────
   disease_lt_list_sc <- setNames(
@@ -502,29 +664,78 @@ CalculationModel <- function(
   # pathway changes life-year estimates compared to applying the all-cause PIF.
 
   if (use_disease_mx) {
-    in_data_sc <- in_data %>%
-      filter(sex == in_sex) %>%
+    in_data_sc <- in_data[in_data$sex == in_sex, ] %>%
       left_join(mx_pylds_sc_summary, by = "age") %>%
       mutate(
         mortality_sum = replace_na(mortality_sum, 0),
-        pylds_sum     = replace_na(pylds_sum,     0),
-        mx        = (mx + mortality_sum) * (1 - scenario),
-        pyld_rate = pmax(pyld_rate + pylds_sum, 0)
-      ) %>%
-      select(-mortality_sum, -pylds_sum)
+        pylds_sum     = replace_na(pylds_sum,     0)
+      )
+    
+    # Apply scenario PIF to mx (scalar or dataframe)
+    if (is.data.frame(scenario) && "age_cat" %in% names(scenario)) {
+      pif_df <- scenario
+      pif_col <- grep("mort|all_cause|pif", names(pif_df), value = TRUE, ignore.case = TRUE)
+      if (length(pif_col) == 0) {
+        pif_col <- setdiff(names(pif_df), c("sex", "age_cat", "cause", "n", "sum_rr_ref", "sum_rr_scen"))
+        pif_col <- pif_col[1]
+      } else {
+        pif_col <- pif_col[1]
+      }
+      in_data_sc <- in_data_sc %>%
+        mutate(age_cat = paste0(floor(age / 5) * 5, "-", floor(age / 5) * 5 + 4)) %>%
+        left_join(
+          pif_df %>% dplyr::filter(sex == in_sex) %>% dplyr::select(age_cat, pif = all_of(pif_col)),
+          by = "age_cat"
+        ) %>%
+        mutate(pif = as.numeric(ifelse(is.na(pif), 0, pif))) %>%
+        mutate(mx = (mx + mortality_sum) * (1 - pif)) %>%
+        dplyr::select(-age_cat, -pif)
+    } else {
+      in_data_sc <- in_data_sc %>%
+        mutate(mx = (mx + mortality_sum) * (1 - scenario))
+    }
+    
+    in_data_sc <- in_data_sc %>%
+      mutate(pyld_rate = pmax(pyld_rate + pylds_sum, 0)) %>%
+      dplyr::select(-mortality_sum, -pylds_sum)
 
   } else {
     # Disease mortality feedback suppressed: mx modified by direct PIF only.
     # pyld still updated from disease prevalence changes.
-    in_data_sc <- in_data %>%
-      filter(sex == in_sex) %>%
+    # scenario can be scalar or dataframe (age-specific PIFs)
+    in_data_sc <- in_data[in_data$sex == in_sex, ] %>%
       left_join(mx_pylds_sc_summary, by = "age") %>%
       mutate(
-        pylds_sum = replace_na(pylds_sum, 0),
-        mx        = mx * (1 - scenario),
-        pyld_rate = pmax(pyld_rate + pylds_sum, 0)
-      ) %>%
-      select(-mortality_sum, -pylds_sum)
+        pylds_sum = replace_na(pylds_sum, 0)
+      )
+    
+    # Apply scenario PIF to mx (scalar or dataframe)
+    if (is.data.frame(scenario) && "age_cat" %in% names(scenario)) {
+      pif_df <- scenario
+      pif_col <- grep("mort|all_cause|pif", names(pif_df), value = TRUE, ignore.case = TRUE)
+      if (length(pif_col) == 0) {
+        pif_col <- setdiff(names(pif_df), c("sex", "age_cat", "cause", "n", "sum_rr_ref", "sum_rr_scen"))
+        pif_col <- pif_col[1]
+      } else {
+        pif_col <- pif_col[1]
+      }
+      in_data_sc <- in_data_sc %>%
+        mutate(age_cat = paste0(floor(age / 5) * 5, "-", floor(age / 5) * 5 + 4)) %>%
+        left_join(
+          pif_df %>% dplyr::filter(sex == in_sex) %>% dplyr::select(age_cat, pif = all_of(pif_col)),
+          by = "age_cat"
+        ) %>%
+        mutate(pif = as.numeric(ifelse(is.na(pif), 0, pif))) %>%
+        mutate(mx = mx * (1 - pif)) %>%
+        dplyr::select(-age_cat, -pif)
+    } else {
+      in_data_sc <- in_data_sc %>%
+        mutate(mx = mx * (1 - scenario))
+    }
+    
+    in_data_sc <- in_data_sc %>%
+      mutate(pyld_rate = pmax(pyld_rate + pylds_sum, 0)) %>%
+      dplyr::select(-mortality_sum, -pylds_sum)
   }
 
   general_lt_sc <- RunLifeTable(
@@ -540,19 +751,19 @@ CalculationModel <- function(
   
   # 6a. Disease-level outputs (wide on disease)
   disease_bl_df <- bind_rows(disease_lt_list_bl) %>%
-    select(sex, age, disease, incidence_disease, mx, px)
+    dplyr::select(sex, age, disease, incidence_disease, mx, px)
   
   disease_sc_df <- bind_rows(disease_lt_list_sc) %>%
-    select(sex, age, disease, incidence_disease, mx, px)
+    dplyr::select(sex, age, disease, incidence_disease, mx, px)
   
   disease_wide <- inner_join(
     disease_sc_df %>% rename_with(~ paste0(., "_sc"), -c(sex, age, disease)),
     disease_bl_df %>% rename_with(~ paste0(., "_bl"), -c(sex, age, disease)),
     by = c("sex", "age", "disease")
   ) %>%
-    inner_join(general_lt_sc %>% select(sex, age, Lx, Lwx), by = c("sex", "age")) %>%
+    inner_join(general_lt_sc %>% dplyr::select(sex, age, Lx, Lwx), by = c("sex", "age")) %>%
     rename(Lx_sc = Lx, Lwx_sc = Lwx) %>%
-    inner_join(general_lt_bl %>% select(sex, age, Lx, Lwx), by = c("sex", "age")) %>%
+    inner_join(general_lt_bl %>% dplyr::select(sex, age, Lx, Lwx), by = c("sex", "age")) %>%
     rename(Lx_bl = Lx, Lwx_bl = Lwx) %>%
     mutate(
       # Incidence numbers = incidence rate × (1 − prevalence) × person-years
@@ -564,7 +775,7 @@ CalculationModel <- function(
       mx_num_sc    = mx_sc * Lx_sc,
       mx_num_diff  = mx_num_sc - mx_num_bl
     ) %>%
-    select(sex, age, disease,
+    dplyr::select(sex, age, disease,
            inc_num_diff, mx_num_diff,
            incidence_disease_sc, incidence_disease_bl,
            mx_sc, mx_bl, px_sc, px_bl) %>%
@@ -578,9 +789,9 @@ CalculationModel <- function(
   
   # 6b. General life table differences
   general_lf <- inner_join(
-    general_lt_sc %>% select(sex, age, Lx, ex, Lwx, ewx) %>%
+    general_lt_sc %>% dplyr::select(sex, age, lx, qx, Lx, ex, Lwx, ewx, mx) %>%
       rename_with(~ paste0(., "_sc"), -c(sex, age)),
-    general_lt_bl %>% select(sex, age, Lx, ex, Lwx, ewx) %>%
+    general_lt_bl %>% dplyr::select(sex, age, lx, qx, Lx, ex, Lwx, ewx, mx) %>%
       rename_with(~ paste0(., "_bl"), -c(sex, age)),
     by = c("sex", "age")
   ) %>%
@@ -588,11 +799,53 @@ CalculationModel <- function(
       Lx_diff  = Lx_sc  - Lx_bl,
       Lwx_diff = Lwx_sc - Lwx_bl,
       ex_diff  = ex_sc  - ex_bl,
-      ewx_diff = ewx_sc - ewx_bl
+      ewx_diff = ewx_sc - ewx_bl,
+      mx_diff  = mx_sc  - mx_bl,
+      mx_num_bl = lx_bl * qx_bl,
+      mx_num_sc = lx_sc * qx_sc,
+      mx_num_diff = mx_num_sc - mx_num_bl
     )
   
   # 6c. Combined output
   output_df <- inner_join(disease_wide, general_lf, by = c("sex", "age"))
+  
+  # ── Step 7: Add PIF tracking columns ────────────────────────────────────────
+  # Extract disease-specific PIFs applied from scenario_inc
+  disease_pif_df <- bind_rows(disease_lt_list_sc) %>%
+    dplyr::select(age, disease, pif_applied) %>%
+    pivot_wider(names_from = disease, values_from = pif_applied,
+                names_prefix = "pif_inc_")
+  
+  # Extract all-cause PIF if scenario is a dataframe
+  if (is.data.frame(scenario) && "age_cat" %in% names(scenario)) {
+    pif_df <- scenario
+    pif_col <- grep("mort|all_cause|pif", names(pif_df), value = TRUE, ignore.case = TRUE)
+    if (length(pif_col) == 0) {
+      pif_col <- setdiff(names(pif_df), c("sex", "age_cat", "cause", "n", "sum_rr_ref", "sum_rr_scen"))
+      pif_col <- pif_col[1]
+    } else {
+      pif_col <- pif_col[1]
+    }
+    
+    all_cause_pif <- output_df %>%
+      mutate(age_cat = paste0(floor(age / 5) * 5, "-", floor(age / 5) * 5 + 4)) %>%
+      left_join(
+        pif_df %>% dplyr::filter(sex == in_sex) %>% dplyr::select(age_cat, pif_all_cause = all_of(pif_col)),
+        by = "age_cat"
+      ) %>%
+      mutate(pif_all_cause = as.numeric(ifelse(is.na(pif_all_cause), 0, pif_all_cause))) %>%
+      dplyr::select(age, pif_all_cause)
+  } else {
+    # scenario is a scalar - create uniform PIF column
+    all_cause_pif <- output_df %>%
+      mutate(pif_all_cause = as.numeric(scenario)) %>%
+      dplyr::select(age, pif_all_cause)
+  }
+  
+  # Join PIF tracking columns to output
+  output_df <- output_df %>%
+    left_join(disease_pif_df, by = "age") %>%
+    left_join(all_cause_pif, by = "age")
   
   output_df
 }

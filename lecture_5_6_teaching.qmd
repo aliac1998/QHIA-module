@@ -27,21 +27,15 @@ editor:
 
 # Data and Functions {#sec-data}
 
-Here we load the libraries, source the helper functions, and read all
-required data.
+Here we load the libraries, source the helper functions, and read all required data.
 
 ```{r}
 #| label: libraries-and-functions
 #| cache: false # to clear data
 
-library(ggplot2)
-library(readr)
-library(dplyr)
-library(tidyr)
-library(stringr)
 # remotes::install_github("meta-analyses/drpa")
 library(drpa)
-
+library(tidyverse) # ggplot2, dplyr, tidyr, readr, stringr
 # ── Helper functions (RunLifeTable, assignPA_RRs, calculate_pif) ───────────────
 source("functions.R")
 
@@ -54,65 +48,71 @@ dir.create("outputs/lecture_5_6", recursive = TRUE, showWarnings = FALSE)
 The MSLT data file contains one row per age (0–100) and sex, with
 all-cause mortality rates (`mx`), disability weights (`pyld_rate`),
 population size, and disease-specific parameters for Colombia. All rates
-are derived from GBD 2023 Colombia estimates.
-
-```{r}
-#| cache: false
-# Clear cache to ensure fresh data
-unlink("_quarto/cache", recursive = TRUE)
-```
+are derived from GBD 2019 Colombia estimates.
 
 ```{r}
 #| label: load-mslt
 
-mslt_general <- read_csv("data/lecture_5_6/mslt_colombia.csv") #(CHANGE for final file)
+mslt_general <- read_csv("data/lecture_5_6/mslt_colombia.csv") 
+
+## change to population for Bogota, file has population for Colombia. 
+
+population_bogota <- read_csv("data/lecture_5_6/population_bogota.csv") %>% 
+  mutate(age = min_age + 2)
+
+# Replace population in mslt_general with Bogotá population
+mslt_general <- mslt_general %>%
+  dplyr::select(-population) %>%
+  left_join(
+    population_bogota %>% dplyr::select(sex, age, population), 
+    by = c("sex", "age"))
 
 glimpse(mslt_general)
 ```
 
 ## Bogotá population data {#sec-bogota-data}
 
-This file contains the Bogotá study population with marginal MET-hours
-per week drawn from sex-specific log-normal distributions, plus a
-counterfactual scenario (`mmet_scen = mmet_ref + 2`). It was prepared in
-Lecture 3.
+This file contains the Bogotá study population with marginal MET-hours baseline and pedestrian scenario created in lecture 3 and saved in lecture_5_6 data. 
 
 ```{r}
 #| label: load-bogota
 
-bogota_mmets <- read_csv("data/base_pop_bogota_ph.csv")
+io <- readRDS("data/lecture_3/ithim_io/io.rds")
+base_pop <- io$bogota$base_pop
+travel_mmets <- read_csv("data/lecture_5_6/mmets_bogota.csv")
 
-bogota_mmets %>%
-  pivot_longer(
-    cols      = c(mmet_ref, mmet_scen),
-    names_to  = "scenario",
-    values_to = "mmet"
-  ) %>%
-  mutate(scenario = ifelse(scenario == "mmet_ref",
-                           "Reference", "Scenario (+2 mMETs)")) %>%
+bogota_mmets <- travel_mmets %>%
+  left_join(base_pop %>% dplyr::select(participant_id, age, sex, age_cat),
+            by = "participant_id") %>%
+  dplyr::select(participant_id, baseline, sc_ped, age, sex, age_cat)
+
+bogota_mmets_long <- bogota_mmets %>%
+  pivot_longer(cols = c(baseline, sc_ped), names_to = "scenario", values_to = "total_mmets")
+
+bogota_mmets_long %>%
   group_by(sex, scenario) %>%
   summarise(
-    n      = n(),
-    min    = round(min(mmet,             na.rm = TRUE), 2),
-    q1     = round(quantile(mmet, 0.25,  na.rm = TRUE), 2),
-    median = round(median(mmet,          na.rm = TRUE), 2),
-    mean   = round(mean(mmet,            na.rm = TRUE), 2),
-    q3     = round(quantile(mmet, 0.75,  na.rm = TRUE), 2),
-    max    = round(max(mmet,             na.rm = TRUE), 2),
+    n      = dplyr::n(),
+    min    = round(min(total_mmets,     na.rm = TRUE), 2),
+    q1     = round(quantile(total_mmets, 0.25,  na.rm = TRUE), 2),
+    median = round(median(total_mmets,  na.rm = TRUE), 2),
+    mean   = round(mean(total_mmets,    na.rm = TRUE), 2),
+    q3     = round(quantile(total_mmets, 0.75,  na.rm = TRUE), 2),
+    max    = round(max(total_mmets,     na.rm = TRUE), 2),
     .groups = "drop"
   )
 ```
 
 ------------------------------------------------------------------------
 
-# Life Table Structure and Variables {#sec-structure}
+# Life Tables {#sec-lifetable}
 
 A **cohort life table** tracks a group of people born (or entering an
 age) at the same time and follows them as they age and die. Each row
 represents one year of age.
 
 | Variable    | Meaning                                                      |
-|------------------------------------------|------------------------------|
+|----------------|--------------------------------------------------------|
 | `mx`        | All-cause mortality *rate* at age x (deaths per person-year) |
 | `qx`        | Probability of dying between age x and x+1                   |
 | `lx`        | Number of survivors at age x                                 |
@@ -154,16 +154,16 @@ lt_ref <- RunLifeTable(
 write_csv(lt_ref, "outputs/lecture_5_6/life_table_reference.csv")
 
 lt_ref %>%
-  select(age, mx, qx, lx, dx, Lx, ex, Lwx, ewx) %>%
+  dplyr::select(age, mx, qx, lx, dx, Lx, ex, Lwx, ewx) %>%
   head(10)
 ```
 
 ```{r}
 #| label: inspect-lt
 
-cat(sprintf("Remaining life expectancy at age 52 (female): %.2f years\n",
+cat(sprintf("Remaining life expectancy at age 37 (female): %.2f years\n",
             lt_ref$ex[1]))
-cat(sprintf("Health-adjusted life expectancy at age 52:    %.2f years\n",
+cat(sprintf("Health-adjusted life expectancy at age 37:    %.2f years\n",
             lt_ref$ewx[1]))
 cat(sprintf("\nTotal person-years lived by cohort (sum Lx):  %s\n",
             format(round(sum(lt_ref$Lx)), big.mark = ",")))
@@ -173,13 +173,13 @@ cat(sprintf("Total health-adjusted life years  (sum Lwx):  %s\n",
 
 ```{r}
 #| label: plot-reference
-#| fig-cap: "Reference life table for females aged 52+. Left: all-cause mortality rate rising with age. Right: cohort survivors declining over time."
+#| fig-cap: "Reference life table for females cohort aged 35-39. Left: all-cause mortality rate rising with age. Right: cohort survivors declining over time."
 
 p1 <- ggplot(lt_ref, aes(x = age, y = mx)) +
   geom_line(colour = "#2563EB", linewidth = 1) +
-  scale_x_continuous(limits = c(52, 100), breaks = seq(52, 100, 10),
+  scale_x_continuous(limits = c(37, 100), breaks = seq(37, 100, 10),
                      expand = c(0, 0)) +
-  labs(title = "All-cause mortality rate — females aged 52+",
+  labs(title = "All-cause mortality rate — females cohort aged 35-39",
        x = "Age", y = "Mortality rate (mx)") +
   theme_classic() +
   theme(plot.title = element_text(size = 12, hjust = 0.5),
@@ -188,9 +188,9 @@ p1 <- ggplot(lt_ref, aes(x = age, y = mx)) +
 
 p2 <- ggplot(lt_ref, aes(x = age, y = lx / 1e6)) +
   geom_line(colour = "#0D9488", linewidth = 1) +
-  scale_x_continuous(limits = c(52, 100), breaks = seq(52, 100, 10),
+  scale_x_continuous(limits = c(37, 100), breaks = seq(37, 100, 10),
                      expand = c(0, 0)) +
-  labs(title = "Survivors — females aged 52+",
+  labs(title = "Survivors — females cohort aged 35-39",
        x = "Age", y = "Survivors (millions)") +
   theme_classic() +
   theme(plot.title = element_text(size = 12, hjust = 0.5),
@@ -229,7 +229,7 @@ lt_trend <- RunLifeTable(
   in_data    = mslt_general,
   in_sex     = "female",
   in_mid_age = 37,
-  mx_trend   = 0.05, # 0.5% annual reduction in mx, compounding each year
+  mx_trend   = 0.5, # 0.5% annual reduction in mx, compounding each year
   mx_trend_years = 10,
   scenario   = 0
 ) %>%
@@ -263,9 +263,9 @@ lt_compare_trend <- bind_rows(lt_ref, lt_trend)
 
 p_mx <- ggplot(lt_compare_trend, aes(x = age, y = mx, colour = label)) +
   geom_line(linewidth = 1) +
-  scale_colour_manual(values = c("Reference (no trend)"    = "#2563EB",
+  scale_colour_manual(values = c("Reference (no trend)"    = "#0D9488",
                                  "With trend (−0.5%/yr)"   = "#7C3AED")) +
-  scale_x_continuous(limits = c(52, 100), breaks = seq(52, 100, 10),
+  scale_x_continuous(limits = c(37, 100), breaks = seq(37, 100, 10),
                      expand = c(0, 0)) +
   labs(title = "Mortality rate: reference vs 0.5% annual trend",
        x = "Age", y = "Mortality rate (mx)", colour = NULL) +
@@ -277,9 +277,9 @@ p_mx <- ggplot(lt_compare_trend, aes(x = age, y = mx, colour = label)) +
 
 p_lx <- ggplot(lt_compare_trend, aes(x = age, y = Lx / 1e6, colour = label)) +
   geom_line(linewidth = 1) +
-  scale_colour_manual(values = c("Reference (no trend)"    = "#2563EB",
+  scale_colour_manual(values = c("Reference (no trend)"    = "#0D9488",
                                  "With trend (−0.5%/yr)"   = "#7C3AED")) +
-  scale_x_continuous(limits = c(52, 100), breaks = seq(52, 100, 10),
+  scale_x_continuous(limits = c(37, 100), breaks = seq(52, 100, 10),
                      expand = c(0, 0)) +
   labs(title = "Person-years lived: reference vs 0.5% annual trend",
        x = "Age", y = "Person-years (millions)", colour = NULL) +
@@ -321,18 +321,14 @@ tibble(
 A 0.5% annual compound reduction in all-cause mortality adds
 approximately `r format(round(gain_ly_trend), big.mark = ",")`
 person-years to this cohort over their remaining lifetime and increases
-life expectancy by about `r round(gain_ex_trend)` days. The effect is
-larger than it may seem because compounding means the improvement
-accumulates silently over decades.
+life expectancy by about `r round(gain_ex_trend)` days. 
 :::
 
 ::: callout-note
 ## Extending this
 
 `mx_trend` can also be **negative** to model worsening mortality (e.g.
-`mx_trend = -1` for a 1% annual increase). Any value can be stacked on
-top of a PIF-based `scenario` reduction — the two mechanisms are applied
-independently and in sequence.
+`mx_trend = -1` for a 1% annual increase). 
 :::
 
 ------------------------------------------------------------------------
@@ -394,7 +390,7 @@ p3 <- ggplot(lt_compare, aes(x = age, y = mx, colour = label)) +
   geom_line(linewidth = 1) +
   scale_colour_manual(values = c("Reference (no trend)"   = "#2563EB",
                                  "5% mortality reduction" = "#DC2626")) +
-  scale_x_continuous(limits = c(52, 100), breaks = seq(52, 100, 10),
+  scale_x_continuous(limits = c(37, 100), breaks = seq(37, 100, 10),
                      expand = c(0, 0)) +
   labs(title = "Mortality rate: reference vs 5% reduction",
        x = "Age", y = "Mortality rate (mx)", colour = NULL) +
@@ -408,7 +404,7 @@ p4 <- ggplot(lt_compare, aes(x = age, y = Lx / 1e6, colour = label)) +
   geom_line(linewidth = 1) +
   scale_colour_manual(values = c("Reference (no trend)"   = "#2563EB",
                                  "5% mortality reduction" = "#DC2626")) +
-  scale_x_continuous(limits = c(52, 100), breaks = seq(52, 100, 10),
+  scale_x_continuous(limits = c(37, 100), breaks = seq(52, 100, 10),
                      expand = c(0, 0)) +
   labs(title = "Person-years lived: reference vs 5% reduction",
        x = "Age", y = "Person-years (millions)", colour = NULL) +
@@ -461,10 +457,12 @@ what would happen in the future under a counterfactual.
 
 ------------------------------------------------------------------------
 
-# Scenario 2 — Physical Activity Increase (Bogotá) {#sec-scenario2}
+---
+
+## Example 2 — Physical Activity Increase (Bogotá) {#sec-scenario2}
 
 **Question:** What is the gain in life years from a population-level
-increase in physical activity (+2 mMET-hours/week) for the Bogotá
+increase in physical activity (pedestrian scenario) for the Bogotá
 population?
 
 The pathway is:
@@ -478,10 +476,15 @@ $$\text{PA distribution} \xrightarrow{\text{dose-response}} \text{RR by individu
 
 diseases <- "all-cause-mortality"
 
-bogota_ref  <- assignPA_RRs(bogota_mmets, diseases = diseases,
-                             mmet_col = "mmet_ref")
-bogota_scen <- assignPA_RRs(bogota_mmets, diseases = diseases,
-                             mmet_col = "mmet_scen")
+bogota_ref  <- bogota_mmets_long %>%
+  filter(scenario == "baseline") %>%
+  rename(mmet = total_mmets) %>%
+  assignPA_RRs(., diseases = diseases, mmet_col = "mmet")
+
+bogota_scen <- bogota_mmets_long %>%
+  filter(scenario == "sc_ped") %>%
+  rename(mmet = total_mmets) %>%
+  assignPA_RRs(., diseases = diseases, mmet_col = "mmet")
 
 # Sanity check — RR should be <= 1
 cat("Reference RR summary:\n")
@@ -490,7 +493,7 @@ cat("\nScenario RR summary (should be slightly lower):\n")
 summary(bogota_scen$`rr_PHYSICAL_ACTIVITY_all-cause-mortality`)
 ```
 
-## Step 2 — Calculate PIFs {#sec-pifs} 
+## Step 2 — Calculate PIFs {#sec-pifs}
 
 $$\text{PIF} = \frac{\sum \text{RR}(\text{ref}) - \sum \text{RR}(\text{scen})}{\sum \text{RR}(\text{ref})}$$
 
@@ -517,14 +520,12 @@ lt_pa <- RunLifeTable(
   mx_trend   = NA,
   scenario   = pifs
 ) %>%
-  mutate(label = "PA scenario (+2 mMETs)")
+  mutate(label = "Walking sceneario")
 
-pif_female_5054 <- pifs %>% filter(sex == "female", age_cat == "50-54") %>%
-  pull(pif)
 write_csv(lt_pa, "outputs/lecture_5_6/life_table_pa_scenario.csv")
 ```
 
-## Step 5 — Compare reference vs PA scenario {#sec-compare-pa}
+## Step 5 — Compare reference vs pedestrian scenario {#sec-compare-pa}
 
 ```{r}
 #| label: compare-pa-scenario
@@ -551,7 +552,7 @@ p5 <- ggplot(lt_compare_pa, aes(x = age, y = mx, colour = label)) +
   geom_line(linewidth = 1) +
   scale_colour_manual(values = c("Reference (no trend)"    = "#2563EB",
                                  "PA scenario (+2 mMETs)"  = "#D97706")) +
-  scale_x_continuous(limits = c(52, 100), breaks = seq(52, 100, 10),
+  scale_x_continuous(limits = c(37, 100), breaks = seq(37, 100, 10),
                      expand = c(0, 0)) +
   labs(title = "Mortality rate: reference vs PA scenario",
        x = "Age", y = "Mortality rate (mx)", colour = NULL) +
@@ -565,7 +566,7 @@ p6 <- ggplot(lt_compare_pa, aes(x = age, y = Lx / 1e6, colour = label)) +
   geom_line(linewidth = 1) +
   scale_colour_manual(values = c("Reference (no trend)"    = "#2563EB",
                                  "PA scenario (+2 mMETs)"  = "#D97706")) +
-  scale_x_continuous(limits = c(52, 100), breaks = seq(52, 100, 10),
+  scale_x_continuous(limits = c(37, 100), breaks = seq(37, 100, 10),
                      expand = c(0, 0)) +
   labs(title = "Person-years lived: reference vs PA scenario",
        x = "Age", y = "Person-years (millions)", colour = NULL) +
@@ -588,7 +589,7 @@ tibble(
   Scenario             = c("Reference (no trend)",
                             "With trend (−0.5%/yr)",
                             "5% mortality reduction",
-                            "PA scenario (+2 mMETs)"),
+                            "Pedestrian scenario"),
   `mx_trend`           = c("NA", "0.5", "NA", "NA"),
   `scenario (PIF)`     = c("0", "0", "5%", "age-specific"),
   `Life expectancy`    = c(round(lt_ref$ex[1],   2),
@@ -618,21 +619,20 @@ tibble(
 
 pifs %>%
   filter(sex == "female") %>%
-  select(age_cat, pif) %>%
+  dplyr::select(age_cat, pif) %>%
   mutate(pif_pct = paste0(round(pif * 100, 2), "%")) %>%
-  select(-pif) %>%
+  dplyr::select(-pif) %>%
   knitr::kable(col.names = c("Age category", "PIF"))
 ```
-
 
 ------------------------------------------------------------------------
 
 ## Exercise — extend to multiple cohorts {#sec-exercise}
 
-Try running the full pipeline for **males aged 52** and for **females
-aged 37**, both with and without the 0.5% trend. What happens to the
-absolute life-year gains? Why does the trend matter more for younger
-cohorts?
+Try running the full pipeline for **males cohort aged 50-54** and for
+**females cohort aged 35-39**, both with and without the 0.5% trend.
+What happens to the absolute life-year gains? Why does the trend matter
+more for younger cohorts?
 
 ```{r}
 #| label: exercise-multiple-cohorts
@@ -674,9 +674,15 @@ driven by all-cause mortality. The multi-state life table extends this
 by adding a **disease layer** for each condition of interest. Each
 disease follows the three-state process from Barendregt et al. (1998):
 
-$$\text{Healthy} (S_x) \xrightarrow{\text{incidence}} \text{Diseased} (C_x) \xrightarrow{\text{case fatality}} \text{Dead from disease} (D_x)$$
+``` text
+Healthy (Sx) --incidence--> Diseased (Cx) --case fatality--> Dead from disease (Dx)
+              <--remission--
+```
 
-with the constraint $S_x + C_x + D_x = 1{,}000$ at every age.
+At cohort entry, some individuals may already have the disease based on 
+prevalence data from GBD. The model initializes with $C_x$ people diseased 
+and $S_x = 1000 - C_x$ healthy, then the constraint $S_x + C_x + D_x = 1{,}000$ 
+holds at every subsequent age.
 
 `RunDisease()` implements this process. It accepts the same `inc_trend`
 and `cf_trend` scalar parameters as `RunLifeTable()` accepts `mx_trend`
@@ -697,13 +703,13 @@ $$\text{incidence}[t] = \text{incidence}[1] \times \left(1 - \frac{\text{inc\_tr
 | `incidence_disease`     | Rate of new disease onset              |
 | `case_fatality_disease` | Rate of dying given diseased           |
 | `remission`             | Rate of recovering from disease        |
-| `dw`                    | Disability weight for this disease    |
+| `dw`                    | Disability weight for this disease     |
 | `PYx`                   | Person-years at risk                   |
 
 ## Reference disease tables (no trends) {#sec-dis-ref}
 
 We run reference disease tables for all three Colombia diseases for the
-same cohort as the life table (females, age 37).
+same cohort as the life table (females, cohort aged 35-39).
 
 ```{r}
 #| label: disease-reference
@@ -746,109 +752,8 @@ dis_ref_dmt2 <- RunDisease(
 
 # Inspect IHD first 8 rows
 dis_ref_ishd %>%
-  select(age, incidence_disease, case_fatality_disease, Sx, Cx, Dx, px, mx) %>%
+  dplyr::select(age, incidence_disease, case_fatality_disease, Sx, Cx, Dx,Tx, px, mx) %>%
   head(8)
-```
-
-```{r}
-#| label: plot-disease-reference
-#| fig-cap: "Disease prevalence (left) and disease-specific mortality rate (right) for IHD, COPD and type 2 diabetes — females aged 52+, Colombia, reference (no trends). Model outputs vs GBD 2023 data."
-
-# Load GBD data for comparison
-gbd_data <- read_csv("data/lecture_5_6/gbd_mslt_2023_colombia.csv")
-
-# Filter GBD data - match test_gbd_comparison.R approach
-gbd_prev <- gbd_data %>%
-  filter(measure_name == "Prevalence",
-         metric_name == "Rate",
-         sex_name == "Female") %>%
-  mutate(age = case_when(
-    age_name == "95+ years" ~ 95,
-    TRUE ~ as.integer(str_extract(age_name, "^\\d+"))
-  )) %>%
-  mutate(disease = case_match(cause_name,
-    "Ischemic heart disease" ~ "ishd",
-    "Chronic obstructive pulmonary disease" ~ "copd", 
-    "Diabetes mellitus type 2" ~ "dmt2",
-    .default = NA_character_
-  )) %>%
-  filter(!is.na(age), !is.na(disease)) %>%
-  select(age, disease, gbd_px = val)
-
-gbd_mort <- gbd_data %>%
-  filter(measure_name == "Deaths",
-         metric_name == "Rate",
-         sex_name == "Female") %>%
-  mutate(age = case_when(
-    age_name == "95+ years" ~ 95,
-    TRUE ~ as.integer(str_extract(age_name, "^\\d+"))
-  )) %>%
-  mutate(disease = case_match(cause_name,
-    "Ischemic heart disease" ~ "ishd",
-    "Chronic obstructive pulmonary disease" ~ "copd",
-    "Diabetes mellitus type 2" ~ "dmt2",
-    .default = NA_character_
-  )) %>%
-  filter(!is.na(age), !is.na(disease)) %>%
-  select(age, disease, gbd_mx = val)
-
-# Merge model outputs with GBD data (filter to age 37-90 to match test_gbd_comparison.R)
-dis_all_ref <- bind_rows(dis_ref_ishd, dis_ref_copd, dis_ref_dmt2) %>%
-  filter(age >= 37, age <= 90) %>%
-  left_join(gbd_prev, by = c("age", "disease")) %>%
-  left_join(gbd_mort, by = c("age", "disease"))
-
-pp1 <- ggplot(dis_all_ref %>% filter(age <= 90), aes(x = age)) +
-  geom_line(aes(y = px * 100000, colour = disease), linewidth = 1) +
-  geom_point(aes(y = gbd_px, colour = disease), shape = 1, size = 2) +
-  scale_x_continuous(limits = c(37, 100), breaks = seq(37, 100, 10), expand = c(0, 0)) +
-  scale_colour_manual(values = c("ishd" = "#DC2626", "copd" = "#D97706", "dmt2" = "#7C3AED")) +
-  labs(title = "Disease prevalence by age", x = "Age", y = "Prevalence (per 100,000)", colour = "Disease") +
-  theme_classic() +
-  theme(plot.title = element_text(size = 12, hjust = 0.5),
-        axis.text = element_text(size = 11), axis.title = element_text(size = 11),
-        legend.position = "bottom")
-
-pp2 <- ggplot(dis_all_ref %>% filter(age < 99), aes(x = age)) +
-  geom_line(aes(y = mx * 100000, colour = disease), linewidth = 1) +
-  geom_point(aes(y = gbd_mx, colour = disease), shape = 1, size = 2) +
-  scale_x_continuous(limits = c(37, 100), breaks = seq(37, 100, 10), expand = c(0, 0)) +
-  scale_colour_manual(values = c("ishd" = "#DC2626", "copd" = "#D97706", "dmt2" = "#7C3AED")) +
-  labs(title = "Disease-specific mortality rate", x = "Age", y = "Mortality (per 100,000)", colour = "Disease") +
-  theme_classic() +
-  theme(plot.title = element_text(size = 12, hjust = 0.5),
-        axis.text = element_text(size = 11), axis.title = element_text(size = 11),
-        legend.position = "bottom")
-
-# Plot per disease for the document
-for (dis in c("ishd", "copd", "dmt2")) {
-  d <- dis_all_ref %>% filter(disease == dis, age <= 90)
-  
-  p1 <- ggplot(d, aes(x = age)) +
-    geom_line(aes(y = px * 100000, linetype = "Model"), colour = "#2563EB", linewidth = 1) +
-    geom_point(aes(y = gbd_px, shape = "GBD"), colour = "#DC2626", size = 2) +
-    scale_linetype_manual(values = c("Model" = "solid")) +
-    scale_shape_manual(values = c("GBD" = 1)) +
-    scale_x_continuous(limits = c(37, 95), breaks = seq(40, 90, 10)) +
-    labs(title = paste(toupper(dis), "Prevalence"), x = "Age", y = "Prevalence (per 100,000)", 
-         linetype = "Data", shape = "Data") +
-    theme_bw() + theme(legend.position = "bottom")
-  
-  print(p1)
-  
-  d2 <- dis_all_ref %>% filter(disease == dis, age < 99)
-  p2 <- ggplot(d2, aes(x = age)) +
-    geom_line(aes(y = mx * 100000, linetype = "Model"), colour = "#2563EB", linewidth = 1) +
-    geom_point(aes(y = gbd_mx, shape = "GBD"), colour = "#DC2626", size = 2) +
-    scale_linetype_manual(values = c("Model" = "solid")) +
-    scale_shape_manual(values = c("GBD" = 1)) +
-    scale_x_continuous(limits = c(37, 95), breaks = seq(40, 90, 10)) +
-    labs(title = paste(toupper(dis), "Mortality"), x = "Age", y = "Mortality (per 100,000)",
-         linetype = "Data", shape = "Data") +
-    theme_bw() + theme(legend.position = "bottom")
-  
-  print(p2)
-}
 ```
 
 ## Adding an incidence trend {#sec-dis-trend}
@@ -869,6 +774,7 @@ dis_trend_ishd <- RunDisease(
   in_disease   = "ishd",
   inc_trend    = 0.5,   # 0.5% annual decline in incidence, compounding
   cf_trend     = NA,
+  inc_trend_years = 10,
   scenario_inc = 0,
   scenario_cf  = 0
 ) %>% mutate(label = "With trend (inc −0.5%/yr)")
@@ -876,30 +782,20 @@ dis_trend_ishd <- RunDisease(
 # Compare IHD prevalence reference vs trend
 dis_ishd_compare <- bind_rows(dis_ref_ishd, dis_trend_ishd)
 
-ggplot(dis_ishd_compare, aes(x = age, y = px, colour = label)) +
+ggplot(dis_ishd_compare, aes(x = age, y = incidence_disease, colour = label)) +
   geom_line(linewidth = 1) +
   scale_colour_manual(values = c("Reference" = "#DC2626",
                                  "With trend (inc −0.5%/yr)" = "#7C3AED")) +
-  scale_x_continuous(limits = c(37, 100), breaks = seq(37, 100, 10), expand = c(0, 0)) +
-  labs(title = "IHD prevalence: reference vs 0.5% annual incidence decline",
-       x = "Age", y = "Prevalence (px)", colour = NULL) +
+  scale_x_continuous(limits = c(37, 99), breaks = seq(37, 99, 10), expand = c(0, 0)) +
+  labs(title = "IHD Incidence: reference vs 0.5% annual incidence decline",
+       x = "Age", y = "Incidence", colour = NULL) +
   theme_classic() +
   theme(plot.title = element_text(size = 12, hjust = 0.5),
         axis.text = element_text(size = 11), axis.title = element_text(size = 11),
         legend.position = "bottom")
 ```
 
-::: callout-note
-## Why prevalence at older ages can be similar despite lower incidence
-
-A declining incidence lowers prevalence at younger ages but the effect
-partly attenuates at older ages. Fewer new incident cases mean fewer
-people also dying from the disease — so more people accumulate in the
-prevalent pool. This is the dynamic captured in Barendregt 1998 Fig. 2
-and is a key insight of the proportional MSLT.
-:::
-
-## Disease Scenario 1 — 5% reduction in incidence {#sec-dis-sc5}
+## Example 1 — 5% reduction in incidence {#sec-dis-sc5}
 
 **Question:** What happens to disease prevalence and disease-specific
 mortality if incidence falls by 5% permanently at all ages?
@@ -942,23 +838,6 @@ dis_sc5_dmt2 <- RunDisease(
 ) %>% mutate(label = "5% incidence reduction")
 ```
 
-```{r}
-#| label: disease-scenario-5pct-results
-
-# Compare reference vs 5% scenario for each disease
-for (dis_name in c("ishd", "copd", "dmt2")) {
-  ref <- get(paste0("dis_ref_", dis_name))
-  sc5 <- get(paste0("dis_sc5_", dis_name))
-
-  cat(sprintf("\n── %s ──────────────────────────────\n", toupper(dis_name)))
-  cat(sprintf("  Cases prevented (sum Cx diff):           %s\n",
-              format(round(sum(sc5$Cx) - sum(ref$Cx)), big.mark = ",")))
-  cat(sprintf("  Disease deaths prevented (sum Dx diff):  %s\n",
-              format(round(sum(sc5$Dx) - sum(ref$Dx)), big.mark = ",")))
-  cat(sprintf("  Mean prevalence change:                  %.4f → %.4f\n",
-              mean(ref$px), mean(sc5$px)))
-}
-```
 
 ```{r}
 #| label: plot-disease-scenario-5pct
@@ -972,11 +851,37 @@ dis_all_sc5 <- bind_rows(
 
 ggplot(dis_all_sc5, aes(x = age, y = incidence_disease, colour = disease, linetype = label)) +
   geom_line(linewidth = 1) +
-  scale_x_continuous(limits = c(37, 100), breaks = seq(37, 100, 10), expand = c(0, 0)) +
+  scale_x_continuous(limits = c(37, 99), breaks = seq(37, 99, 10), expand = c(0, 0)) +
   scale_colour_manual(values = c("ishd" = "#DC2626", "copd" = "#D97706", "dmt2" = "#7C3AED")) +
   scale_linetype_manual(values = c("Reference" = "solid", "5% incidence reduction" = "dashed")) +
   labs(title = "Incidence rate: reference vs 5% reduction — IHD, COPD, DMT2",
        x = "Age", y = "Incidence rate", colour = "Disease", linetype = NULL) +
+  theme_classic() +
+  theme(plot.title = element_text(size = 12, hjust = 0.5),
+        axis.text = element_text(size = 11), axis.title = element_text(size = 11),
+        legend.position = "bottom")
+
+# Prevalence (px) plot
+ggplot(dis_all_sc5, aes(x = age, y = px, colour = disease, linetype = label)) +
+  geom_line(linewidth = 1) +
+  scale_x_continuous(limits = c(37, 99), breaks = seq(37, 99, 10), expand = c(0, 0)) +
+  scale_colour_manual(values = c("ishd" = "#DC2626", "copd" = "#D97706", "dmt2" = "#7C3AED")) +
+  scale_linetype_manual(values = c("Reference" = "solid", "5% incidence reduction" = "dashed")) +
+  labs(title = "Prevalence: reference vs 5% reduction — IHD, COPD, DMT2",
+       x = "Age", y = "Prevalence (px)", colour = "Disease", linetype = NULL) +
+  theme_classic() +
+  theme(plot.title = element_text(size = 12, hjust = 0.5),
+        axis.text = element_text(size = 11), axis.title = element_text(size = 11),
+        legend.position = "bottom")
+
+# Mortality (mx) plot
+ggplot(dis_all_sc5, aes(x = age, y = mx, colour = disease, linetype = label)) +
+  geom_line(linewidth = 1) +
+  scale_x_continuous(limits = c(37, 98), breaks = seq(37, 98, 10), expand = c(0, 0)) +
+  scale_colour_manual(values = c("ishd" = "#DC2626", "copd" = "#D97706", "dmt2" = "#7C3AED")) +
+  scale_linetype_manual(values = c("Reference" = "solid", "5% incidence reduction" = "dashed")) +
+  labs(title = "Mortality rate: reference vs 5% reduction — IHD, COPD, DMT2",
+       x = "Age", y = "Mortality rate (mx)", colour = "Disease", linetype = NULL) +
   theme_classic() +
   theme(plot.title = element_text(size = 12, hjust = 0.5),
         axis.text = element_text(size = 11), axis.title = element_text(size = 11),
@@ -988,14 +893,13 @@ ggplot(dis_all_sc5, aes(x = age, y = incidence_disease, colour = disease, linety
 
 `scenario_inc = 0.05` in `RunDisease()` reduces incidence by 5% at every
 age. The full effect on life years only materialises inside
-`CalculationModel()`, which propagates the disease mortality reduction
-into the general life table. The disease table alone shows you the
+`CalculationModel()`, which propagates the disease mortality and disability reduction into the general life table. The disease table alone shows you the
 epidemiological change; the MSLT shows you the life-years consequence.
 :::
 
-------------------------------------------------------------------------
+---
 
-# Complete MSLT — Physical Activity and Diseases {#sec-mslt}
+## Complete MSLT — Physical Activity and Diseases {#sec-mslt}
 
 The full proportional multi-state life table (Barendregt et al. 1998)
 combines:
@@ -1005,18 +909,20 @@ combines:
 2.  **Disease sections** for each modelled condition (from
     `RunDisease()`)
 3.  **Feedback**: disease-specific mortality from step 2 modifies total
-    `mx` in step 1
+    `mx`  in step 1 and alternatively `mx` is modified directly by the PIF 
 
 `CalculationModel()` runs all three components simultaneously and
 returns differences (scenario − reference) in life years,
 health-adjusted life years, and disease-specific incidence and
 mortality.
 
-## Disease 2 — PA scenario with disease-specific PIFs {#sec-mslt-pa}
+---
+
+## Example 1 — PA scenario with disease-specific PIFs {#sec-mslt-pa}
 
 **Question:** What is the gain in life years and health-adjusted life
-years from a +2 mMET PA increase, modelled through disease-specific
-incidence reductions for IHD, COPD and type 2 diabetes?
+years from PA increase from the Pedestrian scenario, modelled through disease-specific
+incidence reductions for IHD and type 2 diabetes?
 
 The pathway is:
 
@@ -1036,12 +942,15 @@ diseases_mslt <- c(
 )
 
 # Assign RRs for reference and counterfactual PA distributions
-bogota_ref  <- assignPA_RRs(bogota_mmets,
-                                  diseases = diseases_mslt,
-                                  mmet_col = "mmet_ref")
-bogota_scen <- assignPA_RRs(bogota_mmets,
-                                  diseases = diseases_mslt,
-                                  mmet_col = "mmet_scen")
+bogota_ref  <- bogota_mmets_long %>%
+  filter(scenario == "baseline") %>%
+  rename(mmet = total_mmets) %>%
+  assignPA_RRs(., diseases = diseases_mslt, mmet_col = "mmet")
+
+bogota_scen <- bogota_mmets_long %>%
+  filter(scenario == "sc_ped") %>%
+  rename(mmet = total_mmets) %>%
+  assignPA_RRs(., diseases = diseases_mslt, mmet_col = "mmet")
 
 # Quick sanity check — all RRs should be <= 1 (PA is protective)
 rr_cols <- grep("^rr_", names(bogota_ref), value = TRUE)
@@ -1063,37 +972,17 @@ for (col in rr_cols) {
 ```{r}
 #| label: mslt-pifs
 
-pif_results_mslt <- calculate_pif(pop_ref  = bogota_ref,
+pif_inc <- calculate_pif(pop_ref  = bogota_ref,
                                    pop_scen = bogota_scen)
-pifs_mslt        <- pif_results_mslt$pif_table %>% rename(disease = cause)
+pifs_inc        <- pif_inc$pif_table %>% rename(disease = cause)
 
-cat("PIFs by disease, sex and age group:\n")
-print(pifs_mslt  %>% arrange(disease, sex, age_cat), n = Inf)
+cat("PIFs by disease for incidence, sex and age group:\n")
+print(pifs_inc  %>% arrange(disease, sex, age_cat), n = Inf)
 ```
 
-### Step 3 — Extract PIFs for the female 50–54 cohort {#sec-mslt-extract}
+### Step 3 — Run the complete MSLT {#sec-mslt-run}
 
-```{r}
-#| label: mslt-extract-pifs
-
-# Helper: pull one PIF value for the working cohort
-get_pif <- function(disease_name, sex_val = "female", age_val = "50-54") {
-  pifs_mslt %>%
-    filter(disease == disease_name, sex == sex_val, age_cat == age_val) %>%
-    pull(pif)
-}
-
-pif_ishd <- get_pif("coronary_heart_disease")
-pif_dmt2 <- get_pif("diabetes")
-pif_acm  <- get_pif("all_cause_mortality")   # for the life table component
-
-cat(sprintf("PIFs for females aged 50-54:\n"))
-cat(sprintf("  IHD:               %.4f (%.2f%%)\n", pif_ishd, pif_ishd * 100))
-cat(sprintf("  Type 2 diabetes:   %.4f (%.2f%%)\n", pif_dmt2, pif_dmt2 * 100))
-cat(sprintf("  All-cause (LT):    %.4f (%.2f%%)\n", pif_acm,  pif_acm  * 100))
-```
-
-### Step 4 — Run the complete MSLT {#sec-mslt-run}
+First, assess whether the model is working properly. It is expected that without an interventions or difference in trends the model should produce zero outputs since it compares exactly the same sets of MSLTs for the same population cohort. 
 
 ```{r}
 #| label: mslt-validation
@@ -1118,13 +1007,148 @@ cat(sprintf("  sum(inc_num_diff_ishd):    %.6f\n", sum(output_test$inc_num_diff_
 cat(sprintf("  sum(inc_num_diff_copd):    %.6f\n", sum(output_test$inc_num_diff_copd)))
 cat(sprintf("  sum(inc_num_diff_dmt2):    %.6f\n", sum(output_test$inc_num_diff_dmt2)))
 ```
+Second, assess whether the modeled prevalence and mortality aligns with the input data for the selected diseases. 
+
+```{r}
+#| label: mslt-gbd-comparison-validation
+
+# Compare baseline (no intervention) model outputs with GBD data
+# Load GBD data for comparison
+gbd_data <- read_csv("data/lecture_5_6/gbd_mslt_2019_colombia.csv")
+
+# Filter GBD data
+gbd_prev <- gbd_data %>%
+  filter(measure_name == "Prevalence",
+         metric_name == "Rate",
+         sex_name == "Female") %>%
+  mutate(age = case_when(
+    age_name == "95+ years" ~ 95,
+    TRUE ~ as.integer(str_extract(age_name, "^\\d+"))
+  )) %>%
+  mutate(disease = case_match(cause_name,
+    "Ischemic heart disease" ~ "ishd",
+    "Chronic obstructive pulmonary disease" ~ "copd", 
+    "Diabetes mellitus type 2" ~ "dmt2",
+    .default = NA_character_
+  )) %>%
+  filter(!is.na(age), !is.na(disease), age >= 15) %>%
+  dplyr::select(age, disease, gbd_px = val)
+
+gbd_mort <- gbd_data %>%
+  filter(measure_name == "Deaths",
+         metric_name == "Rate",
+         sex_name == "Female") %>%
+  mutate(age = case_when(
+    age_name == "95+ years" ~ 95,
+    TRUE ~ as.integer(str_extract(age_name, "^\\d+"))
+  )) %>%
+  mutate(disease = case_match(cause_name,
+    "Ischemic heart disease" ~ "ishd",
+    "Chronic obstructive pulmonary disease" ~ "copd",
+    "Diabetes mellitus type 2" ~ "dmt2",
+    .default = NA_character_
+  )) %>%
+  filter(!is.na(age), !is.na(disease)) %>%
+  dplyr::select(age, disease, gbd_mx = val)
+
+# Run baseline disease tables for comparison
+dis_ref_ishd <- RunDisease(
+  in_data      = mslt_general,
+  in_sex       = "female",
+  in_mid_age   = 37,
+  in_disease   = "ishd",
+  scenario_inc = 0,
+  scenario_cf  = 0
+) %>% mutate(disease = "ishd")
+
+dis_ref_copd <- RunDisease(
+  in_data      = mslt_general,
+  in_sex       = "female",
+  in_mid_age   = 37,
+  in_disease   = "copd",
+  scenario_inc = 0,
+  scenario_cf  = 0
+) %>% mutate(disease = "copd")
+
+dis_ref_dmt2 <- RunDisease(
+  in_data      = mslt_general,
+  in_sex       = "female",
+  in_mid_age   = 37,
+  in_disease   = "dmt2",
+  scenario_inc = 0,
+  scenario_cf  = 0
+) %>% mutate(disease = "dmt2")
+
+# Merge model outputs with GBD data
+dis_all_ref <- bind_rows(dis_ref_ishd, dis_ref_copd, dis_ref_dmt2) %>%
+  filter(age >= 37, age <= 90) %>%
+  left_join(gbd_prev, by = c("age", "disease")) %>%
+  left_join(gbd_mort, by = c("age", "disease")) %>%
+  mutate(
+    model_px = px * 100000,
+    model_mx = mx * 100000
+  )
+
+# Print comparison summary
+cat("\n=== Model vs GBD Comparison (baseline, no intervention) ===\n")
+for (dis in c("ishd", "copd", "dmt2")) {
+  d <- dis_all_ref %>% filter(disease == dis)
+  cat("\n", toupper(dis), ":\n")
+  cat("  Prevalence - Model range:", round(range(d$model_px, na.rm = TRUE), 1), "\n")
+  cat("  Prevalence - GBD range:  ", round(range(d$gbd_px, na.rm = TRUE), 1), "\n")
+  cat("  Prevalence - Correlation:", round(cor(d$model_px, d$gbd_px, use = "complete.obs"), 3), "\n")
+  cat("  Mortality - Model range: ", round(range(d$model_mx, na.rm = TRUE), 1), "\n")
+  cat("  Mortality - GBD range:   ", round(range(d$gbd_mx, na.rm = TRUE), 1), "\n")
+  cat("  Mortality - Correlation: ", round(cor(d$model_mx, d$gbd_mx, use = "complete.obs"), 3), "\n")
+}
+
+# Plot comparison
+p_px <- ggplot(dis_all_ref %>% filter(age <= 90), aes(x = age)) +
+  geom_line(aes(y = model_px, colour = disease), linewidth = 1) +
+  geom_point(aes(y = gbd_px, colour = disease), shape = 1, size = 2, na.rm = TRUE) +
+  scale_x_continuous(limits = c(37, 95), breaks = seq(40, 90, 10)) +
+  scale_colour_manual(values = c("ishd" = "#DC2626", "copd" = "#D97706", "dmt2" = "#7C3AED")) +
+  labs(title = "Disease Prevalence: Model (line) vs GBD (points)", 
+       x = "Age", y = "Prevalence (per 100,000)", colour = "Disease") +
+  theme_classic() + theme(legend.position = "bottom")
+
+p_mx <- ggplot(dis_all_ref %>% filter(age < 99), aes(x = age)) +
+  geom_line(aes(y = model_mx, colour = disease), linewidth = 1) +
+  geom_point(aes(y = gbd_mx, colour = disease), shape = 1, size = 2, na.rm = TRUE) +
+  scale_x_continuous(limits = c(37, 95), breaks = seq(40, 90, 10)) +
+  scale_colour_manual(values = c("ishd" = "#DC2626", "copd" = "#D97706", "dmt2" = "#7C3AED")) +
+  labs(title = "Disease Mortality: Model (line) vs GBD (points)", 
+       x = "Age", y = "Mortality (per 100,000)", colour = "Disease") +
+  theme_classic() + theme(legend.position = "bottom")
+
+print(p_px)
+print(p_mx)
+```
 
 ```{r}
 #| label: mslt-pa-scenario
 
-# ── Scenario A: disease-specific PIFs — disease mortality feeds into general LT
-# mx is modified through the disease pathway: incidence ↓ → prevalence ↓ →
-# disease-specific mortality ↓ → total mx ↓
+# Create age-specific PIF dataframes for diseases and all-cause (female)
+# Note: column names must contain "inc" for scenario_inc, "cf" for scenario_cf, 
+# and "mort"/"all_cause"/"pif" for scenario (mortality)
+pif_ishd_by_age <- pifs_inc %>% 
+  dplyr::filter(disease == "coronary_heart_disease", sex == "female") %>%
+  dplyr::arrange(age_cat) %>%
+  dplyr::select(age_cat, sex, pif_inc_ishd = pif)
+
+pif_dmt2_by_age <- pifs_inc %>% 
+  dplyr::filter(disease == "diabetes", sex == "female") %>%
+  dplyr::arrange(age_cat) %>%
+  dplyr::select(age_cat, sex, pif_inc_dmt2 = pif)
+
+pif_acm_by_age <- pifs_inc %>% 
+  dplyr::filter(disease == "all_cause_mortality", sex == "female") %>%
+  dplyr::arrange(age_cat) %>%
+  dplyr::select(age_cat, sex, pif_mort = pif)
+
+# ── Scenario A: disease-specific mortality pathway (use_disease_mx = TRUE)
+# Disease PIFs → reduced incidence → reduced disease mortality → reduced all-cause mx
+# Using dataframes for scenario_inc (age_cat with PIFs, expanded to single ages in RunDisease)
 output_mslt_dis <- CalculationModel(
   in_data        = mslt_general,
   in_sex         = "female",
@@ -1134,18 +1158,14 @@ output_mslt_dis <- CalculationModel(
   inc_trend      = NA,
   cf_trend       = NA,
   scenario       = 0,
-  scenario_inc   = c(ishd = pif_ishd, copd = 0, dmt2 = pif_dmt2),
+  scenario_inc   = list(ishd = pif_ishd_by_age, copd = 0, dmt2 = pif_dmt2_by_age),
   scenario_cf    = 0,
-  use_disease_mx = TRUE   # disease mortality changes propagate to general LT
+  use_disease_mx = TRUE
 )
 
-write_csv(output_mslt_dis, "outputs/lecture_5_6/mslt_pa_disease_pifs.csv")
-
-# ── Scenario B: same disease incidence changes, but mx modified via all-cause
-# PIF directly — disease mortality feedback switched off.
-# Disease incidence still changes (same scenario_inc as above) so case counts
-# are produced, but the life-year effect enters via the all-cause PIF on mx
-# rather than through the disease-mortality pathway.
+# ── Scenario B: all-cause mortality pathway (use_disease_mx = FALSE)
+# Same disease incidence changes, but age-specific all-cause PIF applied directly to mx
+# scenario as dataframe applies age-specific PIF to all-cause mx
 output_mslt_acm <- CalculationModel(
   in_data        = mslt_general,
   in_sex         = "female",
@@ -1154,53 +1174,79 @@ output_mslt_acm <- CalculationModel(
   in_disease     = c("ishd", "copd", "dmt2"),
   inc_trend      = NA,
   cf_trend       = NA,
-  scenario       = pif_acm,   # all-cause PIF modifies mx directly
-  scenario_inc   = c(ishd = pif_ishd, copd = 0, dmt2 = pif_dmt2),
+  scenario       = pif_acm_by_age,  # age-specific all-cause PIF as dataframe
+  scenario_inc   = list(ishd = pif_ishd_by_age, copd = 0, dmt2 = pif_dmt2_by_age),
   scenario_cf    = 0,
-  use_disease_mx = FALSE  # disease mortality does NOT feed into general LT
+  use_disease_mx = FALSE
 )
 
+write_csv(output_mslt_dis, "outputs/lecture_5_6/mslt_pa_disease_pifs.csv")
 write_csv(output_mslt_acm, "outputs/lecture_5_6/mslt_pa_allcause_pif.csv")
 ```
 
 ### Step 5 — Results {#sec-mslt-results}
 
 ```{r}
-#| label: mslt-results
+#| label: mslt-results-table
+#| echo: false
 
-cat("── Scenario A: disease-specific PIFs → disease mortality in general LT ──\n")
-cat(sprintf("  Total life years gained  (sum Lx_diff):  %s\n",
-            format(round(sum(output_mslt_dis$Lx_diff)),  big.mark = ",")))
-cat(sprintf("  Total HA life yrs gained (sum Lwx_diff): %s\n",
-            format(round(sum(output_mslt_dis$Lwx_diff)), big.mark = ",")))
-cat(sprintf("  Life expectancy gain (ex_diff at entry): %.1f days\n",
-            output_mslt_dis$ex_diff[1] * 365))
+fmt_diff <- function(x) {
+  x <- round(x)
+  sign <- ifelse(x > 0, "+", "")
+  paste0(sign, format(x, big.mark = ","))
+}
 
-cat("\n── Disease cases and deaths prevented (Scenario A) ─────────────────────\n")
-cat(sprintf("  IHD cases prevented:   %s\n",
-            format(round(abs(sum(output_mslt_dis$inc_num_diff_ishd))), big.mark = ",")))
-cat(sprintf("  COPD cases prevented:  %s\n",
-            format(round(abs(sum(output_mslt_dis$inc_num_diff_copd))), big.mark = ",")))
-cat(sprintf("  DMT2 cases prevented:  %s\n",
-            format(round(abs(sum(output_mslt_dis$inc_num_diff_dmt2))), big.mark = ",")))
-cat(sprintf("  IHD deaths prevented:  %s\n",
-            format(round(abs(sum(output_mslt_dis$mx_num_diff_ishd))),  big.mark = ",")))
+scen_a_ly   <- sum(output_mslt_dis$Lx_diff)
+scen_a_lwx  <- sum(output_mslt_dis$Lwx_diff)
+scen_a_ex   <- output_mslt_dis$ex_diff[1] * 365
+scen_a_ishd_cases <- sum(output_mslt_dis$inc_num_diff_ishd)
+scen_a_copd_cases <- sum(output_mslt_dis$inc_num_diff_copd)
+scen_a_dmt2_cases <- sum(output_mslt_dis$inc_num_diff_dmt2)
+scen_a_ishd_deaths <- sum(output_mslt_dis$mx_num_diff_ishd)
+scen_a_copd_deaths <- sum(output_mslt_dis$mx_num_diff_copd)
+scen_a_dmt2_deaths <- sum(output_mslt_dis$mx_num_diff_dmt2)
 
-cat("\n── Scenario B: disease incidence changes + all-cause PIF on mx ──────────\n")
-cat(sprintf("  Total life years gained  (sum Lx_diff):  %s\n",
-            format(round(sum(output_mslt_acm$Lx_diff)),  big.mark = ",")))
-cat(sprintf("  Total HA life yrs gained (sum Lwx_diff): %s\n",
-            format(round(sum(output_mslt_acm$Lwx_diff)), big.mark = ",")))
-cat(sprintf("  Life expectancy gain (ex_diff at entry): %.1f days\n",
-            output_mslt_acm$ex_diff[1] * 365))
-cat("  (Disease case counts are identical to Scenario A — same scenario_inc)\n")
+scen_b_ly   <- sum(output_mslt_acm$Lx_diff)
+scen_b_lwx  <- sum(output_mslt_acm$Lwx_diff)
+scen_b_ex   <- output_mslt_acm$ex_diff[1] * 365
+scen_b_ishd_cases <- sum(output_mslt_acm$inc_num_diff_ishd)
+scen_b_copd_cases <- sum(output_mslt_acm$inc_num_diff_copd)
+scen_b_dmt2_cases <- sum(output_mslt_acm$inc_num_diff_dmt2)
+scen_b_ishd_deaths <- sum(output_mslt_acm$mx_num_diff_ishd)
+scen_b_copd_deaths <- sum(output_mslt_acm$mx_num_diff_copd)
+scen_b_dmt2_deaths <- sum(output_mslt_acm$mx_num_diff_dmt2)
+
+tibble(
+  Measure = c(
+    "Life years gained (Lx)",
+    "HALYs gained (Lwx)",
+    "Life expectancy gain (days at age 37)",
+    "IHD cases",
+    "COPD cases", 
+    "DMT2 cases",
+    "IHD deaths",
+    "COPD deaths",
+    "DMT2 deaths"
+  ),
+  `Scenario A\n(disease mx pathway)` = c(
+    fmt_diff(scen_a_ly), fmt_diff(scen_a_lwx), fmt_diff(scen_a_ex),
+    fmt_diff(scen_a_ishd_cases), fmt_diff(scen_a_copd_cases), fmt_diff(scen_a_dmt2_cases),
+    fmt_diff(scen_a_ishd_deaths), fmt_diff(scen_a_copd_deaths), fmt_diff(scen_a_dmt2_deaths)
+  ),
+  `Scenario B\n(all-cause PIF)` = c(
+    fmt_diff(scen_b_ly), fmt_diff(scen_b_lwx), fmt_diff(scen_b_ex),
+    fmt_diff(scen_b_ishd_cases), fmt_diff(scen_b_copd_cases), fmt_diff(scen_b_dmt2_cases),
+    fmt_diff(scen_b_ishd_deaths), fmt_diff(scen_b_copd_deaths), fmt_diff(scen_b_dmt2_deaths)
+  )
+) |> 
+  knitr::kable(booktabs = TRUE, align = "lcc", caption = "MSLT results comparison. Positive values = cases/deaths prevented; negative = cases/deaths increased.")
 ```
 
 ```{r}
 #| label: plot-mslt-results
 #| fig-cap: "Left: life years and health-adjusted life years gained at each age — Scenario A (disease mortality pathway) vs Scenario B (all-cause PIF). Right: disease incidence and mortality changes (identical for both scenarios as they share the same scenario_inc)."
 
-# ── Life years comparison: both MSLT scenarios ────────────────────────────────
+# ── Life years and HALYs comparison: both MSLT scenarios ───────────────────────
 ly_compare <- bind_rows(
   output_mslt_dis %>%
     transmute(age, sex,
@@ -1218,7 +1264,7 @@ ly_compare <- bind_rows(
 
 p_ly <- ggplot(ly_compare, aes(x = age, y = value, colour = measure)) +
   geom_line(linewidth = 1) +
-  scale_x_continuous(limits = c(37, 100), breaks = seq(37, 100, 10), expand = c(0, 0)) +
+  scale_x_continuous(limits = c(37, 98), breaks = seq(37, 98, 10), expand = c(0, 0)) +
   scale_colour_manual(values = c(
     "Lx (disease mx pathway)"  = "#2563EB",
     "Lwx (disease mx pathway)" = "#0D9488",
@@ -1232,30 +1278,31 @@ p_ly <- ggplot(ly_compare, aes(x = age, y = value, colour = measure)) +
         axis.text = element_text(size = 11), axis.title = element_text(size = 11),
         legend.position = "bottom")
 
-# ── Disease changes plot — same for both scenarios (shared scenario_inc) ───────
-output_graphs <- output_mslt_dis %>%
-  select(age, sex, inc_num_diff_ishd, inc_num_diff_copd, inc_num_diff_dmt2,
-         mx_num_diff_ishd,  mx_num_diff_copd,  mx_num_diff_dmt2) %>%
-  pivot_longer(cols = -c(age, sex), names_to = "measure") %>%
-  mutate(measure = recode(measure,
-    "inc_num_diff_ishd" = "IHD incidence",
-    "inc_num_diff_copd" = "COPD incidence",
-    "inc_num_diff_dmt2" = "DMT2 incidence",
-    "mx_num_diff_ishd"  = "IHD deaths",
-    "mx_num_diff_copd"  = "COPD deaths",
-    "mx_num_diff_dmt2"  = "DMT2 deaths"))
+# ── Mortality (mx) comparison: both MSLT scenarios ────────────────────────────
+mx_compare <- bind_rows(
+  output_mslt_dis %>%
+    transmute(age, sex,
+              measure = "mx (disease mx pathway)",    value = mx_diff),
+  output_mslt_acm %>%
+    transmute(age, sex,
+              measure = "mx (all-cause PIF)",          value = mx_diff)
+)
 
-p_dis <- ggplot(output_graphs, aes(x = age, y = value, colour = measure)) +
+p_mx <- ggplot(mx_compare, aes(x = age, y = value, colour = measure, linetype = measure)) +
   geom_line(linewidth = 1) +
-  scale_x_continuous(limits = c(37, 100), breaks = seq(37, 100, 10), expand = c(0, 0)) +
-  labs(title = "Disease incidence and deaths: changes by age\n(identical for both MSLT scenarios)",
-       x = "Age", y = "Difference (negative = prevented)", colour = NULL) +
+  scale_x_continuous(limits = c(37, 98), breaks = seq(37, 98, 10), expand = c(0, 0)) +
+  scale_colour_manual(values = c(
+    "mx (disease mx pathway)"  = "#7C3AED",
+    "mx (all-cause PIF)"       = "#BE185D"
+  )) +
+  labs(title = "Mortality rate (mx) change: disease pathway vs all-cause PIF",
+       x = "Age", y = "Difference in mx (scenario − reference)", colour = NULL, linetype = NULL) +
   theme_classic() +
   theme(plot.title = element_text(size = 12, hjust = 0.5),
         axis.text = element_text(size = 11), axis.title = element_text(size = 11),
         legend.position = "bottom")
 
-gridExtra::grid.arrange(p_ly, p_dis, ncol = 2)
+gridExtra::grid.arrange(p_ly, p_mx, ncol = 2)
 ```
 
 ## Comparing all scenarios {#sec-mslt-compare}
@@ -1288,8 +1335,18 @@ tibble(
   ),
   `IHD cases prevented` = c(
     "—",
-    format(round(abs(sum(output_mslt_dis$inc_num_diff_ishd))), big.mark = ","),
-    format(round(abs(sum(output_mslt_acm$inc_num_diff_ishd))), big.mark = ",")
+    format(round((sum(output_mslt_dis$inc_num_diff_ishd))), big.mark = ","),
+    format(round((sum(output_mslt_acm$inc_num_diff_ishd))), big.mark = ",")
+  ),
+  `COPD cases prevented` = c(
+    "—",
+    format(round((sum(output_mslt_dis$inc_num_diff_copd))), big.mark = ","),
+    format(round((sum(output_mslt_acm$inc_num_diff_copd))), big.mark = ",")
+  ),
+  `DMT2 cases prevented` = c(
+    "—",
+    format(round((sum(output_mslt_dis$inc_num_diff_dmt2))), big.mark = ","),
+    format(round((sum(output_mslt_acm$inc_num_diff_dmt2))), big.mark = ",")
   ),
   `Competing risks` = c("No", "Yes", "Yes")
 ) |> knitr::kable()
@@ -1327,7 +1384,7 @@ important PA→mortality pathways beyond the three modelled diseases.
 #| label: mslt-exercise
 #| eval: false
 
-# Run the full MSLT pipeline for males aged 52 and females aged 37
+# Run the full MSLT pipeline for males cohort aged 50-54 and females cohort aged 35-39
 # Compare: how do disease-specific gains differ by sex and entry age?
 
 for (sex_i in c("female", "male")) {
@@ -1335,11 +1392,11 @@ for (sex_i in c("female", "male")) {
 
     age_cat_i <- case_when(age_i == 37 ~ "35-39", age_i == 52 ~ "50-54")
 
-    pif_ishd_i <- pifs_mslt %>%
+    pif_ishd_i <- pifs_inc %>%
       filter(disease == "coronary_heart_disease",
              sex == sex_i, age_cat == age_cat_i) %>%
       pull(pif)
-    pif_dmt2_i <- pifs_mslt %>%
+    pif_dmt2_i <- pifs_inc %>%
       filter(disease == "diabetes",
              sex == sex_i, age_cat == age_cat_i) %>%
       pull(pif)
@@ -1367,276 +1424,70 @@ for (sex_i in c("female", "male")) {
 }
 ```
 
-------------------------------------------------------------------------
+## Comparison with CRA approach {#sec-cra-comparison}
 
-# Integrated MSLT — CalculationModel() {#sec-calcmodel}
-
-`CalculationModel()` is the engine that ties everything together. It
-runs five internal steps:
-
-1.  **Baseline general life table** — `RunLifeTable()` with
-    `scenario = 0`
-2.  **Baseline disease life tables** — `RunDisease()` with zero
-    scenarios for every disease
-3.  **Scenario disease life tables** — `RunDisease()` with
-    disease-specific PIFs or reductions
-4.  **Aggregate disease changes** — sum Δmx and Δpyld across all
-    diseases
-5.  **Scenario general life table** — `RunLifeTable()` with modified mx
-    and pyld
-
-The function now accepts two independent mechanisms for modifying
-mortality:
-
-| Parameter | Mechanism | Enters via |
-|------------------------|------------------------|------------------------|
-| `scenario_inc` / `scenario_cf` | Disease-mediated (incidence → prevalence → disease mx → total mx) | Disease sections feed into general LT |
-| `scenario` | Direct PIF on all-cause mx | Applied on top of disease-mediated changes |
-
-Both can be used simultaneously — they are applied independently at the
-hazard-rate level.
-
-## Validation — zero scenario {#sec-cm-validate}
-
-Always run with all scenarios set to zero first. Every `_diff` column
-must be exactly zero — if not, there is a bug in the setup.
+A Comparative Risk Assessment (CRA) applies PIFs directly to baseline burden
+without the multi-state life table dynamics. It estimates effects at a single point in time (year 1), while MSLT captures effects over the full lifetime.
 
 ```{r}
-#| label: cm-validate
-
-output_test <- CalculationModel(
-  in_data      = mslt_general,
-  in_sex       = "female",
-  in_mid_age   = 37,
-  in_disease   = c("ishd", "copd", "dmt2"),
-  mx_trend     = NA,
-  inc_trend    = NA,
-  cf_trend     = NA,
-  scenario     = 0,
-  scenario_inc = 0,
-  scenario_cf  = 0
-)
-
-cat("Validation — all must equal zero:\n")
-check_cols <- c("Lx_diff", "Lwx_diff", "ex_diff",
-                grep("^inc_num_diff|^mx_num_diff", names(output_test), value = TRUE))
-for (col in check_cols) {
-  val <- sum(output_test[[col]], na.rm = TRUE)
-  ok  <- abs(val) < 1e-6
-  cat(sprintf("  %-35s %s  (%.8f)\n", col, if (ok) "PASS" else "FAIL", val))
-}
-```
-
-## Example 1 — 5% direct incidence reduction across all diseases {#sec-cm-sc1}
-
-This is the disease-level equivalent of the 5% all-cause mortality
-reduction in the simple life table. `scenario_inc = 0.05` as a scalar
-applies equally to IHD, COPD and DMT2.
-
-```{r}
-#| label: cm-sc1-run
-
-output_sc1 <- CalculationModel(
-  in_data      = mslt_general,
-  in_sex       = "female",
-  in_mid_age   = 37,
-  in_disease   = c("ishd", "copd", "dmt2"),
-  mx_trend     = NA,
-  inc_trend    = NA,
-  cf_trend     = NA,
-  scenario     = 0,
-  scenario_inc = 0.05,   # same 5% reduction for all three diseases
-  scenario_cf  = 0
-)
-```
-
-```{r}
-#| label: cm-sc1-results
-
-cat("── Life years and HALYs — 5% uniform incidence reduction ──────────────\n")
-cat(sprintf("  Life years gained        (sum Lx_diff):  %s\n",
-            format(round(sum(output_sc1$Lx_diff)),  big.mark = ",")))
-cat(sprintf("  HA life years gained     (sum Lwx_diff): %s\n",
-            format(round(sum(output_sc1$Lwx_diff)), big.mark = ",")))
-cat(sprintf("  Life expectancy gain:                    %.1f days\n",
-            output_sc1$ex_diff[1] * 365))
-
-cat("\n── Disease cases prevented (negative = fewer cases) ──────────────────\n")
-for (dis in c("ishd", "copd", "dmt2")) {
-  col <- paste0("inc_num_diff_", dis)
-  if (col %in% names(output_sc1)) {
-    cat(sprintf("  %-6s cases prevented: %s\n", toupper(dis),
-                format(round(abs(sum(output_sc1[[col]], na.rm = TRUE))), big.mark = ",")))
-  }
-}
-```
-
-::: callout-note
-## Why MSLT gains differ from the simple life table 5% scenario
-
-The simple life table (`RunLifeTable(scenario = 0.05)`) reduces
-**all-cause** mx by 5% at every age. The MSLT with `scenario_inc = 0.05`
-reduces **disease incidence** for the three modelled diseases — which
-then reduces disease-specific mortality, which then feeds into all-cause
-mx. Because IHD, COPD and DMT2 together account for only a fraction of
-all-cause mortality, the total mx reduction is smaller, producing fewer
-life-year gains. This is the correct and more realistic approach when
-the mechanism is disease-specific.
-:::
-
-## Example 2 — PA intervention with disease-specific PIFs {#sec-cm-sc2}
-
-The two MSLT runs (`output_mslt_dis` and `output_mslt_acm`) were already
-computed in [Section @sec-mslt-pa]. Here we summarise the key comparison
-and define `pif_vector` for reference in the summary table below.
-
-```{r}
-#| label: cm-sc2-named-vector
-
-# pif_copd = 0 because COPD is not in the drpa PA dose-response library
-pif_copd   <- 0
-pif_vector <- c(ishd = pif_ishd, copd = 0, dmt2 = pif_dmt2)
-
-cat("Disease-specific PIFs for the PA scenario (females, 50-54):\n")
-cat(sprintf("  IHD:             %.4f (%.2f%%)\n", pif_ishd, pif_ishd * 100))
-cat(sprintf("  COPD:            0.0000 (0.00%%)  — not a PA dose-response disease\n"))
-cat(sprintf("  Type 2 diabetes: %.4f (%.2f%%)\n", pif_dmt2, pif_dmt2 * 100))
-```
-
-```{r}
-#| label: cm-sc2-results
-
-cat("── PA disease PIFs — disease mortality pathway (output_mslt_dis) ────────\n")
-cat(sprintf("  Life years gained        (sum Lx_diff):  %s\n",
-            format(round(sum(output_mslt_dis$Lx_diff)),  big.mark = ",")))
-cat(sprintf("  HA life years gained     (sum Lwx_diff): %s\n",
-            format(round(sum(output_mslt_dis$Lwx_diff)), big.mark = ",")))
-cat(sprintf("  Life expectancy gain:                    %.1f days\n",
-            output_mslt_dis$ex_diff[1] * 365))
-
-cat("\n── PA disease PIFs — all-cause PIF on mx (output_mslt_acm) ─────────────\n")
-cat(sprintf("  Life years gained        (sum Lx_diff):  %s\n",
-            format(round(sum(output_mslt_acm$Lx_diff)),  big.mark = ",")))
-cat(sprintf("  HA life years gained     (sum Lwx_diff): %s\n",
-            format(round(sum(output_mslt_acm$Lwx_diff)), big.mark = ",")))
-cat(sprintf("  Life expectancy gain:                    %.1f days\n",
-            output_mslt_acm$ex_diff[1] * 365))
-
-cat("\n── Disease cases prevented (identical for both — same scenario_inc) ─────\n")
-for (dis in c("ishd", "copd", "dmt2")) {
-  col_inc <- paste0("inc_num_diff_", dis)
-  col_mx  <- paste0("mx_num_diff_",  dis)
-  cat(sprintf("  %s — cases prevented: %s  |  deaths prevented: %s\n",
-              toupper(dis),
-              format(round(abs(sum(output_mslt_dis[[col_inc]], na.rm = TRUE))), big.mark = ","),
-              format(round(abs(sum(output_mslt_dis[[col_mx]],  na.rm = TRUE))), big.mark = ",")))
-}
-```
-
-::: callout-tip
-## Interpreting the difference between the two MSLT PA scenarios
-
-Both scenarios use identical `scenario_inc` so they produce identical
-disease case counts. The difference in life years reveals how much of
-the all-cause PIF is explained by the disease-mortality pathway alone.
-If `output_mslt_dis` and `output_mslt_acm` give similar totals, the
-three modelled diseases account for most of the PA mortality benefit in
-this cohort. If `output_mslt_acm` is substantially larger, there are
-important PA pathways (mental health, musculoskeletal, other cancers)
-not captured in IHD, COPD and DMT2.
-:::
-
-## Summary comparison across all approaches {#sec-cm-compare}
-
-```{r}
-#| label: cm-comparison-table
+#| label: cra-comparison
 #| echo: false
 
-tibble(
-  Approach = c(
-    "Simple LT — direct all-cause PIF",
-    "Simple LT — 5% all-cause reduction",
-    "MSLT — 5% uniform incidence reduction",
-    "MSLT — disease PIFs, disease mx pathway",
-    "MSLT — disease PIFs, all-cause PIF on mx"
-  ),
-  `Scenario parameters` = c(
-    "scenario = pif_acm",
-    "scenario = 0.05",
-    "scenario_inc = 0.05 (all diseases)",
-    "scenario_inc = pif_vector; use_disease_mx = TRUE",
-    "scenario_inc = pif_vector; scenario = pif_acm; use_disease_mx = FALSE"
-  ),
-  `Gain Lx` = c(
-    format(round(gain_ly_pa),                   big.mark = ","),
-    format(round(gain_ly),                       big.mark = ","),
-    format(round(sum(output_sc1$Lx_diff)),       big.mark = ","),
-    format(round(sum(output_mslt_dis$Lx_diff)),  big.mark = ","),
-    format(round(sum(output_mslt_acm$Lx_diff)),  big.mark = ",")
-  ),
-  `Gain Lwx` = c(
-    format(round(gain_hly_pa),                   big.mark = ","),
-    format(round(gain_hly),                       big.mark = ","),
-    format(round(sum(output_sc1$Lwx_diff)),       big.mark = ","),
-    format(round(sum(output_mslt_dis$Lwx_diff)),  big.mark = ","),
-    format(round(sum(output_mslt_acm$Lwx_diff)),  big.mark = ",")
-  ),
-  `Disease cases` = c("not modelled", "not modelled",
-                       "yes — all diseases equal",
-                       "yes — disease-specific",
-                       "yes — disease-specific"),
-  `Competing risks` = c("No", "No", "Yes", "Yes", "Yes")
-) |> knitr::kable()
+baseline_pop <- mslt_general %>% filter(sex == "female", age == 37) %>% pull(population) %>% unique()
+inc_ishd_37   <- mslt_general %>% filter(sex == "female", age == 37) %>% pull(incidence_ishd)
+inc_dmt2_37   <- mslt_general %>% filter(sex == "female", age == 37) %>% pull(incidence_dmt2)
+mx_acm_37     <- mslt_general %>% filter(sex == "female", age == 37) %>% pull(mx)
+
+pif_ishd_3539 <- pif_ishd_by_age$pif_inc_ishd[5]
+pif_dmt2_3539 <- pif_dmt2_by_age$pif_inc_dmt2[5]
+pif_acm_3539  <- pif_acm_by_age$pif_mort[5]
+
+ex_37 <- lt_ref %>% filter(age == 37) %>% pull(ex)
+
+cra_ishd_cases  <- baseline_pop * inc_ishd_37 * pif_ishd_3539
+cra_dmt2_cases  <- baseline_pop * inc_dmt2_37 * pif_dmt2_3539
+cra_mx_acm      <- baseline_pop * mx_acm_37 * pif_acm_3539
+cra_ly_gained   <- cra_mx_acm * ex_37
+
+mslt_dis_ishd_cases_y1 <- output_mslt_dis$inc_num_diff_ishd[1]
+mslt_dis_copd_cases_y1 <- output_mslt_dis$inc_num_diff_copd[1]
+mslt_dis_dmt2_cases_y1 <- output_mslt_dis$inc_num_diff_dmt2[1]
+mslt_dis_mx_y1         <- output_mslt_dis$mx_num_diff[1]
+mslt_dis_ishd_cases_lt <- sum(output_mslt_dis$inc_num_diff_ishd, na.rm = TRUE)
+mslt_dis_copd_cases_lt <- sum(output_mslt_dis$inc_num_diff_copd, na.rm = TRUE)
+mslt_dis_dmt2_cases_lt <- sum(output_mslt_dis$inc_num_diff_dmt2, na.rm = TRUE)
+mslt_dis_mx_lt         <- sum(output_mslt_dis$mx_num_diff, na.rm = TRUE)
+mslt_dis_ly_gained     <- sum(output_mslt_dis$Lx_diff)
+
+mslt_acm_ishd_cases_y1 <- output_mslt_acm$inc_num_diff_ishd[1]
+mslt_acm_copd_cases_y1 <- output_mslt_acm$inc_num_diff_copd[1]
+mslt_acm_dmt2_cases_y1 <- output_mslt_acm$inc_num_diff_dmt2[1]
+mslt_acm_mx_y1         <- output_mslt_acm$mx_num_diff[1]
+mslt_acm_ishd_cases_lt <- sum(output_mslt_acm$inc_num_diff_ishd, na.rm = TRUE)
+mslt_acm_copd_cases_lt <- sum(output_mslt_acm$inc_num_diff_copd, na.rm = TRUE)
+mslt_acm_dmt2_cases_lt <- sum(output_mslt_acm$inc_num_diff_dmt2, na.rm = TRUE)
+mslt_acm_mx_lt         <- sum(output_mslt_acm$mx_num_diff, na.rm = TRUE)
+mslt_acm_ly_gained     <- sum(output_mslt_acm$Lx_diff)
 ```
 
 ```{r}
-#| label: cm-plot-all-scenarios
-#| fig-cap: "Life years gained at each age across all four MSLT scenarios. The simple life table scenarios are shown for reference. Note how the MSLT disease-specific scenarios produce different age profiles of benefit — IHD prevention is concentrated at older ages while diabetes prevention is more uniformly distributed."
+#| label: cra-vs-mslt-table
+#| echo: false
 
-# Compile age profiles for plotting
-all_scenarios <- bind_rows(
-  output_sc1         %>% transmute(age, value = Lx_diff, scenario = "5% uniform incidence"),
-  output_mslt_dis    %>% transmute(age, value = Lx_diff, scenario = "PA disease PIFs (disease mx)"),
-  output_mslt_acm    %>% transmute(age, value = Lx_diff, scenario = "PA disease PIFs (all-cause PIF)")
-)
+fmt <- function(x) format(round(x), big.mark = ",")
 
-ggplot(all_scenarios, aes(x = age, y = value, colour = scenario)) +
-  geom_line(linewidth = 1) +
-  scale_x_continuous(limits = c(37, 100), breaks = seq(37, 100, 10), expand = c(0, 0)) +
-  scale_colour_manual(values = c(
-    "5% uniform incidence"             = "#DC2626",
-    "PA disease PIFs (disease mx)"     = "#D97706",
-    "PA disease PIFs (all-cause PIF)"  = "#0D9488"
-  )) +
-  labs(title   = "Life years gained by age — MSLT scenarios compared",
-       x       = "Age",
-       y       = "Life years gained (Lx_diff)",
-       colour  = NULL) +
-  theme_classic() +
-  theme(plot.title      = element_text(size = 12, hjust = 0.5),
-        axis.text       = element_text(size = 11),
-        axis.title      = element_text(size = 11),
-        legend.position = "bottom")
+tibble(
+  Measure = c("Year 1: IHD cases", "Year 1: COPD cases", "Year 1: DMT2 cases", "Year 1: deaths prevented", 
+              "Lifetime: IHD cases", "Lifetime: COPD cases", "Lifetime: DMT2 cases", "Lifetime: deaths prevented", "Lifetime: life years gained"),
+  CRA = c(fmt(cra_ishd_cases), "—", fmt(cra_dmt2_cases), fmt(cra_mx_acm), "—", "—", "—", "—", fmt(cra_ly_gained)),
+  `MSLT (disease mx)` = c(fmt(mslt_dis_ishd_cases_y1), fmt(mslt_dis_copd_cases_y1), fmt(mslt_dis_dmt2_cases_y1), fmt(mslt_dis_mx_y1),
+                          fmt(mslt_dis_ishd_cases_lt), fmt(mslt_dis_copd_cases_lt), fmt(mslt_dis_dmt2_cases_lt), fmt(mslt_dis_mx_lt), fmt(mslt_dis_ly_gained)),
+  `MSLT (direct PIF)` = c(fmt(mslt_acm_ishd_cases_y1), fmt(mslt_acm_copd_cases_y1), fmt(mslt_acm_dmt2_cases_y1), fmt(mslt_acm_mx_y1),
+                          fmt(mslt_acm_ishd_cases_lt), fmt(mslt_acm_copd_cases_lt), fmt(mslt_acm_dmt2_cases_lt), fmt(mslt_acm_mx_lt), fmt(mslt_acm_ly_gained))
+) |> 
+  knitr::kable(booktabs = TRUE, align = "lccc", caption = "CRA vs MSLT: Year 1 and lifetime effects")
 ```
 
-::: callout-tip
-## What the comparison teaches
-
-The three MSLT scenarios produce different results because they enter
-the model at different points in the causal chain:
-
--   **5% uniform incidence** — same proportional reduction for all three
-    diseases regardless of PA dose-response. A useful hypothetical
-    benchmark.
--   **PA disease PIFs** — realistic: IHD benefits most from PA, COPD
-    least. The gains are concentrated in the diseases where PA has the
-    strongest dose-response.
--   **PA combined** — adds benefits from PA pathways outside the three
-    modelled diseases. Larger total gain but risks double-counting
-    unless the direct `scenario` is carefully specified as the residual.
-
-The simple life table approaches (applying a PIF directly to all-cause
-mx) produce similar totals to the MSLT approaches but lose all
-information about which diseases drove the change, how disease
-prevalence shifted, and how competing risks attenuated the gains.
-:::
+- **CRA**: deaths prevented in year 1 × remaining life expectancy = lifetime life years
+- **MSLT (disease mx)**: incidence ↓ → disease mx ↓ → total mx ↓  
+- **MSLT (direct PIF)**: same incidence changes; mx × (1 − pif_acm)

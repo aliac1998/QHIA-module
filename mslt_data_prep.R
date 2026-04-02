@@ -30,8 +30,15 @@ library(foreach)
 # 0. Configuration
 # =============================================================================
 
-GBD_FILE    <- "data/lecture_5_6/gbd_mslt_2023_colombia.csv"   # <-- set path as needed
+GBD_FILE    <- "data/lecture_5_6/gbd_mslt_2019_colombia.csv"   # <-- set path as needed
 OUTPUT_FILE <- "data/lecture_5_6/mslt_colombia.csv"
+
+# Apply constraints to DMT2 rates (incidence, case fatality, remission)
+# Set to FALSE to disable constraints
+CONSTRAIN_DMT2 <- FALSE
+
+# Use remission in disbayes (set to FALSE to disable)
+USE_REMISSION <- FALSE
 
 # Diseases present in this GBD extract and their short names.
 DISEASE_MAP <- tibble(
@@ -117,7 +124,9 @@ gbd_wider <- gbd_rate %>%
     values_from = c(rate, number),
     names_glue  = "{measure}_{.value}_{sname}"
   ) %>%
-  mutate(across(everything(), ~ replace(., is.infinite(.) | is.na(.), 0)))
+  # Only replace NAs with 0 for specific columns, not prevalence
+  mutate(across(c(matches("^(deaths|ylds)_")), 
+               ~ replace(., is.infinite(.) | is.na(.), 0)))
 
 # Residual all-cause YLD rate not explained by modelled diseases
 all_disease_yld_count <- gbd_wider %>%
@@ -322,9 +331,9 @@ gbddb <- gbd_disagg %>%
 # Use 10000 for very low remission that still works with disbayes
 # -----------------------------------------------------------------------------
 RECOVERY_YEARS <- c(
-  ishd = 10000,   # IHD: very low remission (chronic heart disease) - use 10000 not 999
-  copd = 20,      # COPD: some recovery possible with treatment
-  dmt2 = 100      # DMT2: higher = lower remission = higher prevalence
+  ishd = 100000,   # IHD: very low remission (chronic heart disease) - use 10000 not 999
+  copd = 30,      # COPD: some recovery possible with treatment
+  dmt2 = 3000      # DMT2: higher = lower remission = higher prevalence
 )
 
 message("Disease-specific recovery assumptions:")
@@ -396,42 +405,47 @@ for (d in names(RECOVERY_YEARS)) {
 }
 
 # -----------------------------------------------------------------------------
-# Add GBD-style value priors for DMT2 only
+# Add GBD-style value priors for DMT2 only (optional)
 # - Remission: max 0.01 for ages 15+
 # - Case fatality (excess mortality): max 0.15
 # - Incidence: max 0.0008 for ages 1-15, max 0.1 for ages 15+
 # -----------------------------------------------------------------------------
-gbddb <- gbddb %>%
-  mutate(
-    # Constrain incidence rates for dmt2 only
-    inc_rate = ifelse(inc_denom > 0, inc_num / inc_denom, 0),
-    inc_rate = ifelse(sname == "dmt2",
-      case_when(
-        age < 1 ~ 0,
-        age < 15 ~ pmin(inc_rate, 0.0008),
-        TRUE ~ pmin(inc_rate, 0.2)  # increased from 0.1 to allow higher incidence
+if (CONSTRAIN_DMT2) {
+  gbddb <- gbddb %>%
+    mutate(
+      # Constrain incidence rates for dmt2 only
+      inc_rate = ifelse(inc_denom > 0, inc_num / inc_denom, 0),
+      inc_rate = ifelse(sname == "dmt2",
+        case_when(
+          age < 1 ~ 0,
+          age < 15 ~ pmin(inc_rate, 0.0008),
+          TRUE ~ pmin(inc_rate, 0.2)  # increased from 0.1 to allow higher incidence
+        ),
+        inc_rate
       ),
-      inc_rate
-    ),
-    inc_num = ifelse(inc_denom > 0, floor(inc_rate * inc_denom), 0L),
-    
-    # Constrain case fatality rates for dmt2 only (max 0.15)
-    cf_rate = ifelse(inc_denom > 0, mort_num / inc_denom, 0),
-    cf_rate = ifelse(sname == "dmt2", pmin(cf_rate, 0.15), cf_rate),
-    mort_num = ifelse(inc_denom > 0, floor(cf_rate * inc_denom), 0L),
-    
-    # Constrain remission rates for dmt2 only (max 0.01 for ages 15+)
-    rem_rate = ifelse(rem_denom > 0, rem_num / rem_denom, 0),
-    rem_rate = ifelse(sname == "dmt2" & age < 15, 0, rem_rate),
-    rem_rate = ifelse(sname == "dmt2" & age >= 15, pmin(rem_rate, 0.01), rem_rate),
-    rem_num = ifelse(rem_denom > 0, floor(rem_rate * rem_denom), 0L)
-  ) %>%
-  select(-inc_rate, -cf_rate, -rem_rate)
-
-
-message("GBD-style value priors applied to DMT2 only:")
-message("  Incidence: max 0.0008 (ages 1-15), max 0.1 (ages 15+)")
-message("  Case fatality: max 0.15")
+      inc_num = ifelse(inc_denom > 0, floor(inc_rate * inc_denom), 0L),
+      
+      # Constrain case fatality rates for dmt2 only (max 0.15)
+      cf_rate = ifelse(inc_denom > 0, mort_num / inc_denom, 0),
+      cf_rate = ifelse(sname == "dmt2", pmin(cf_rate, 0.15), cf_rate),
+      mort_num = ifelse(inc_denom > 0, floor(cf_rate * inc_denom), 0L),
+      
+      # Constrain remission rates for dmt2 only (max 0.01 for ages 15+)
+      rem_rate = ifelse(rem_denom > 0, rem_num / rem_denom, 0),
+      rem_rate = ifelse(sname == "dmt2" & age < 15, 0, rem_rate),
+      rem_rate = ifelse(sname == "dmt2" & age >= 15, pmin(rem_rate, 0.01), rem_rate),
+      rem_num = ifelse(rem_denom > 0, floor(rem_rate * rem_denom), 0L)
+    ) %>%
+    select(-inc_rate, -cf_rate, -rem_rate)
+  
+  
+  message("GBD-style value priors applied to DMT2 only:")
+  message("  Incidence: max 0.0008 (ages 1-15), max 0.1 (ages 15+)")
+  message("  Case fatality: max 0.15")
+  message("  Remission: max 0.01 (ages 15+)")
+} else {
+  message("DMT2 constraints disabled (CONSTRAIN_DMT2 = FALSE)")
+}
 message("  Remission: max 0.01 (ages 15+)")
 
 disbayes_results <- vector("list", length(combinations))
@@ -444,16 +458,30 @@ for (i in seq_along(combinations)) {
   
   dat <- gbddb %>% filter(sname == sel_disease, sex == sel_gender)
   
-  # Run disbayes - for IHD skip remission (causes numerical issues)
-  if (sel_disease == "ishd") {
+  # Run disbayes - optionally include remission
+  # Use cf_prior to constrain case fatality - stronger prior to reduce cf
+  if (!USE_REMISSION) {
+    # No remission - run without rem_num and rem_denom
     dbres <- disbayes(
       data       = dat,        age        = "age",
       inc_num    = "inc_num",  inc_denom  = "inc_denom",
       prev_num   = "prev_num", prev_denom = "prev_denom",
       mort_num   = "mort_num", mort_denom = "mort_denom",
-      method     = "opt", iter = 10000, eqage = 0
+      method     = "opt", iter = 10000, eqage = 0,
+      cf_prior   = c(1, 300)   # Very strong prior: expects very low case fatality
+    )
+  } else if (sel_disease == "ishd") {
+    # IHD - skip remission due to numerical issues
+    dbres <- disbayes(
+      data       = dat,        age        = "age",
+      inc_num    = "inc_num",  inc_denom  = "inc_denom",
+      prev_num   = "prev_num", prev_denom = "prev_denom",
+      mort_num   = "mort_num", mort_denom = "mort_denom",
+      method     = "opt", iter = 10000, eqage = 0,
+      cf_prior   = c(1, 300)   # Very strong prior: expects very low case fatality
     )
   } else {
+    # Other diseases with remission
     dbres <- disbayes(
       data       = dat,        age        = "age",
       inc_num    = "inc_num",  inc_denom  = "inc_denom",
@@ -461,7 +489,8 @@ for (i in seq_along(combinations)) {
       mort_num   = "mort_num", mort_denom = "mort_denom",
       rem_num    = "rem_num",  rem_denom  = "rem_denom",
       method     = "opt", iter = 10000, eqage = 0,
-      rem_prior  = c(1.1, 1)
+      rem_prior  = c(1.1, 1),
+      cf_prior   = c(1, 300)   # Very strong prior: expects very low case fatality
     )
   }
   
@@ -592,8 +621,12 @@ interpolate_log <- function(values_at_cats) {
 gbd_for_interp <- gbd_wider %>%
   select(age_cat, sex, pop, pyld_rate,
          matches("^(deaths|ylds)_(rate|number)_"),
-         matches("^prevalence_")) %>%
-  mutate(sex = tolower(sex))
+         matches("^prevalence_(rate|number)_")) %>%
+  mutate(sex = tolower(sex)) %>%
+  rename_with(~ tolower(.))  # Convert all column names to lowercase
+
+# Debug: print column names
+message("Columns in gbd_for_interp: ", paste(names(gbd_for_interp), collapse = ", "))
 
 # Build per-age 0-100 data frame with interpolated columns
 interp_diseases <- setdiff(DISEASE_MAP$sname, "allc")
@@ -618,7 +651,7 @@ result_list <- map(c("male", "female"), function(sx) {
   out$population <- pop_vec
 
   # All-cause mortality rate → mx
-  mx_col <- "Deaths_rate_allc"
+  mx_col <- "deaths_rate_allc"
   if (mx_col %in% names(sub)) {
     out$mx <- interpolate_log(get_vec(mx_col))
   } else {
@@ -676,8 +709,10 @@ disbayes_tidy <- disbayes_output %>%
 
 mslt_final <- mslt_base %>%
   left_join(disbayes_tidy %>% select(-sex, -age), by = "age_sex") %>%
-  mutate(across(everything(),
-                ~ replace(., is.infinite(.) | is.na(.), 0))) %>%
+  # Only replace NAs with 0 for specific columns, not prevalence
+  mutate(across(c(matches("^(deaths|ylds|incidence|case_fatality|remission|pyld|mx|population)"),
+                  -matches("^prevalence")),
+               ~ replace(., is.infinite(.) | is.na(.), 0))) %>%
   arrange(sex, age)
 
 # =============================================================================
