@@ -216,21 +216,21 @@ Assume that there are only two distance bands `A` and `B` and that `80%` of all 
 
 To increase the `cycling` mode share by `5%` of all trips, the following conversions are required:
 
--   `5% x 80% / 60% = 6.67%` of non-cycling trips in distance band `A` to cycling trips and
+- `5% x 80% / 60% = 6.67%` of non-cycling trips in distance band `A` to cycling trips and
 
--   `5% x 20% / 40% = 2.5%` of non-cycling trips in distance band B to cycling trips.
+- `5% x 20% / 40% = 2.5%` of non-cycling trips in distance band B to cycling trips.
 
--   Overall, this leads to an increase of `(5% x 80% / 60%) x 60%` + `(5% x 20% / 40%) * 40%` = `5%` of cycling trips, whilst preserving the cycling mode shares of `80%` in distance band `A` and `20%` in distance band `B` and preserving the total mode shares of `60%` in distance band `A` and `40%` in distance band `B`. The total number of trips is also preserved.
+- Overall, this leads to an increase of `(5% x 80% / 60%) x 60%` + `(5% x 20% / 40%) * 40%` = `5%` of cycling trips, whilst preserving the cycling mode shares of `80%` in distance band `A` and `20%` in distance band `B` and preserving the total mode shares of `60%` in distance band `A` and `40%` in distance band `B`. The total number of trips is also preserved.
 
 # Create a Pedestrian Scenario
 
 This exercise demonstrates scenario creation independent of the `ithimr` package. Having established a comprehensive understanding of trip modes and their associated distances, this section modifies selected trips and quantifies the resulting impact on physical activity. The analysis focuses on:
 
--   the shortest distance category with distances less than `2` km
+- the shortest distance category with distances less than `2` km
 
--   Create a new scenario with target mode as `pedestrian` trips
+- Create a new scenario with target mode as `pedestrian` trips
 
--   It should be noted that `pedestrian` trips already constitute the majority of trips in the baseline scenario; consequently, as observed in the preceding exercise, only a modest change in PA volume is anticipated.
+- It should be noted that `pedestrian` trips already constitute the majority of trips in the baseline scenario; consequently, as observed in the preceding exercise, only a modest change in PA volume is anticipated.
 
 ## Create a copy of the `baseline` scenario
 
