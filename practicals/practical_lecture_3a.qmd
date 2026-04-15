@@ -216,21 +216,21 @@ Assume that there are only two distance bands `A` and `B` and that `80%` of all 
 
 To increase the `cycling` mode share by `5%` of all trips, the following conversions are required:
 
--   `5% x 80% / 60% = 6.67%` of non-cycling trips in distance band `A` to cycling trips and
+- `5% x 80% / 60% = 6.67%` of non-cycling trips in distance band `A` to cycling trips and
 
--   `5% x 20% / 40% = 2.5%` of non-cycling trips in distance band B to cycling trips.
+- `5% x 20% / 40% = 2.5%` of non-cycling trips in distance band B to cycling trips.
 
--   Overall, this leads to an increase of `(5% x 80% / 60%) x 60%` + `(5% x 20% / 40%) * 40%` = `5%` of cycling trips, whilst preserving the cycling mode shares of `80%` in distance band `A` and `20%` in distance band `B` and preserving the total mode shares of `60%` in distance band `A` and `40%` in distance band `B`. The total number of trips is also preserved.
+- Overall, this leads to an increase of `(5% x 80% / 60%) x 60%` + `(5% x 20% / 40%) * 40%` = `5%` of cycling trips, whilst preserving the cycling mode shares of `80%` in distance band `A` and `20%` in distance band `B` and preserving the total mode shares of `60%` in distance band `A` and `40%` in distance band `B`. The total number of trips is also preserved.
 
 # Create a Pedestrian Scenario
 
 This exercise demonstrates scenario creation independent of the `ithimr` package. Having established a comprehensive understanding of trip modes and their associated distances, this section modifies selected trips and quantifies the resulting impact on physical activity. The analysis focuses on:
 
--   the shortest distance category with distances less than `2` km
+- the shortest distance category with distances less than `2` km
 
--   Create a new scenario with target mode as `pedestrian` trips
+- Create a new scenario with target mode as `pedestrian` trips
 
--   It should be noted that `pedestrian` trips already constitute the majority of trips in the baseline scenario; consequently, as observed in the preceding exercise, only a modest change in PA volume is anticipated.
+- It should be noted that `pedestrian` trips already constitute the majority of trips in the baseline scenario; consequently, as observed in the preceding exercise, only a modest change in PA volume is anticipated.
 
 ## Create a copy of the `baseline` scenario
 
@@ -407,7 +407,6 @@ plotly::ggplotly(
 
 ```
 
-
 ```{ojs}
 //| echo: false
 //db = FileAttachment("quiz_answers.parquet")
@@ -418,7 +417,9 @@ db = await DuckDBClient.of({
 
 ```
 
-## Question 2: Distance Categories
+# Quiz
+
+## 2: Distance Categories
 
 **What are the three distance categories defined in this practical?**
 
@@ -450,9 +451,9 @@ q2_feedback = {
 }
 ```
 
-<div style="margin-top: 1rem;">
-  ${q2_feedback}
-</div>
+::: {style="margin-top: 1rem;"}
+\${q2_feedback}
+:::
 
 ------------------------------------------------------------------------
 
@@ -488,9 +489,9 @@ q3_feedback = {
 }
 ```
 
-<div style="margin-top: 1rem;">
-  ${q3_feedback}
-</div>
+::: {style="margin-top: 1rem;"}
+\${q3_feedback}
+:::
 
 ------------------------------------------------------------------------
 
@@ -498,7 +499,7 @@ q3_feedback = {
 
 **What line of code creates a copy of the baseline scenario?**
 
-```r
+``` r
 # Option A: trips_ped_scen <- trips_baseline
 # Option B: trips_ped_scen <- trips |> filter(scenario == "baseline")
 # Option C: trips_ped_scen <- rbind(trips_baseline, trips_ped_scen)
@@ -533,9 +534,9 @@ q4_feedback = {
 }
 ```
 
-<div style="margin-top: 1rem;">
-  ${q4_feedback}
-</div>
+::: {style="margin-top: 1rem;"}
+\${q4_feedback}
+:::
 
 ------------------------------------------------------------------------
 
@@ -543,7 +544,7 @@ q4_feedback = {
 
 **What does this code achieve?**
 
-```r
+``` r
 trips_ped_scen[trips_ped_scen$trip_distance_cat == '0-2km' &
                trips_ped_scen$trip_mode != "pedestrian"]$trip_mode <- 'pedestrian'
 ```
@@ -576,9 +577,9 @@ q5_feedback = {
 }
 ```
 
-<div style="margin-top: 1rem;">
-  ${q5_feedback}
-</div>
+::: {style="margin-top: 1rem;"}
+\${q5_feedback}
+:::
 
 ------------------------------------------------------------------------
 
@@ -614,9 +615,9 @@ q6_feedback = {
 }
 ```
 
-<div style="margin-top: 1rem;">
-  ${q6_feedback}
-</div>
+::: {style="margin-top: 1rem;"}
+\${q6_feedback}
+:::
 
 ------------------------------------------------------------------------
 
@@ -652,9 +653,9 @@ q7_feedback = {
 }
 ```
 
-<div style="margin-top: 1rem;">
-  ${q7_feedback}
-</div>
+::: {style="margin-top: 1rem;"}
+\${q7_feedback}
+:::
 
 ------------------------------------------------------------------------
 
@@ -683,4 +684,13 @@ viewof q8_answer = Inputs.radio(
 //| echo: false
 q8_feedback = {
   if (q8_answer == null) return html`<i>Please select one option.</i>`;
-  const row = await db.sql`SELECT 
+  const row = await db.sql`SELECT correct_id FROM quiz_answers WHERE question_id = 'q8'`;
+  return q8_answer === row.correct_id
+    ? html`<span style="color: green; font-weight: bold;">Correct!</span>`
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
+}
+```
+
+::: {style="margin-top: 1rem;"}
+\${q8_feedback}
+:::
