@@ -406,3 +406,281 @@ plotly::ggplotly(
           x = "mMET hours per week", y = "CDF"))
 
 ```
+
+
+```{ojs}
+//| echo: false
+//db = FileAttachment("quiz_answers.parquet")
+
+db = await DuckDBClient.of({
+  quiz_answers: FileAttachment("quiz_answers.parquet")
+})
+
+```
+
+## Question 2: Distance Categories
+
+**What are the three distance categories defined in this practical?**
+
+```{ojs}
+//| echo: false
+viewof q2_answer = Inputs.radio(
+  ["a", "b", "c", "d"],
+  {
+    value: null,
+    label: html`<b></b>`,
+    format: x => ({
+      a: "0-3km, 3-8km, 8+km",
+      b: "0-2km, 2-6km, 6+km",
+      c: "0-5km, 5-10km, 10+km",
+      d: "0-1km, 1-5km, 5+km"
+    })[x]
+  }
+)
+```
+
+```{ojs}
+//| echo: false
+q2_feedback = {
+  if (q2_answer == null) return html`<i>Please select one option.</i>`;
+  const row = await db.sql`SELECT correct_id FROM quiz_answers WHERE question_id = 'q2'`;
+  return q2_answer === row.correct_id
+    ? html`<span style="color: green; font-weight: bold;">Correct!</span>`
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
+}
+```
+
+<div style="margin-top: 1rem;">
+  ${q2_feedback}
+</div>
+
+------------------------------------------------------------------------
+
+## Question 3: CDF Interpretation
+
+**In the CDF plot, what does the y-axis represent?**
+
+```{ojs}
+//| echo: false
+viewof q3_answer = Inputs.radio(
+  ["a", "b", "c", "d"],
+  {
+    value: null,
+    label: html`<b></b>`,
+    format: x => ({
+      a: "Number of trips",
+      b: "Proportion of trips",
+      c: "Distance in km",
+      d: "Duration in minutes"
+    })[x]
+  }
+)
+```
+
+```{ojs}
+//| echo: false
+q3_feedback = {
+  if (q3_answer == null) return html`<i>Please select one option.</i>`;
+  const row = await db.sql`SELECT correct_id FROM quiz_answers WHERE question_id = 'q3'`;
+  return q3_answer === row.correct_id
+    ? html`<span style="color: green; font-weight: bold;">Correct!</span>`
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
+}
+```
+
+<div style="margin-top: 1rem;">
+  ${q3_feedback}
+</div>
+
+------------------------------------------------------------------------
+
+## Question 4: Scenario Creation
+
+**What line of code creates a copy of the baseline scenario?**
+
+```r
+# Option A: trips_ped_scen <- trips_baseline
+# Option B: trips_ped_scen <- trips |> filter(scenario == "baseline")
+# Option C: trips_ped_scen <- rbind(trips_baseline, trips_ped_scen)
+# Option D: trips_ped_scen <- mutate(trips_baseline, scenario = "sc_ped")
+```
+
+```{ojs}
+//| echo: false
+viewof q4_answer = Inputs.radio(
+  ["a", "b", "c", "d"],
+  {
+    value: null,
+    label: html`<b></b>`,
+    format: x => ({
+      a: "trips_ped_scen <- trips_baseline",
+      b: "trips_ped_scen <- trips |> filter(scenario == \"baseline\")",
+      c: "trips_ped_scen <- rbind(trips_baseline, trips_ped_scen)",
+      d: "trips_ped_scen <- mutate(trips_baseline, scenario = \"sc_ped\")"
+    })[x]
+  }
+)
+```
+
+```{ojs}
+//| echo: false
+q4_feedback = {
+  if (q4_answer == null) return html`<i>Please select one option.</i>`;
+  const row = await db.sql`SELECT correct_id FROM quiz_answers WHERE question_id = 'q4'`;
+  return q4_answer === row.correct_id
+    ? html`<span style="color: green; font-weight: bold;">Correct!</span>`
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
+}
+```
+
+<div style="margin-top: 1rem;">
+  ${q4_feedback}
+</div>
+
+------------------------------------------------------------------------
+
+## Question 5: Mode Conversion
+
+**What does this code achieve?**
+
+```r
+trips_ped_scen[trips_ped_scen$trip_distance_cat == '0-2km' &
+               trips_ped_scen$trip_mode != "pedestrian"]$trip_mode <- 'pedestrian'
+```
+
+```{ojs}
+//| echo: false
+viewof q5_answer = Inputs.radio(
+  ["a", "b", "c", "d"],
+  {
+    value: null,
+    label: html`<b></b>`,
+    format: x => ({
+      a: "Converts all trips to pedestrian mode",
+      b: "Converts only non-pedestrian trips in the 0-2km category to pedestrian mode",
+      c: "Removes all trips in the 0-2km category",
+      d: "Filters trips longer than 2km"
+    })[x]
+  }
+)
+```
+
+```{ojs}
+//| echo: false
+q5_feedback = {
+  if (q5_answer == null) return html`<i>Please select one option.</i>`;
+  const row = await db.sql`SELECT correct_id FROM quiz_answers WHERE question_id = 'q5'`;
+  return q5_answer === row.correct_id
+    ? html`<span style="color: green; font-weight: bold;">Correct!</span>`
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
+}
+```
+
+<div style="margin-top: 1rem;">
+  ${q5_feedback}
+</div>
+
+------------------------------------------------------------------------
+
+## Question 6: Duration Calculation
+
+**Using the formula `duration (mins) = distance (km) × 60 / walking_speed`, calculate the duration for a 5 km trip when `WALKING_SPEED = 2.5`.**
+
+```{ojs}
+//| echo: false
+viewof q6_answer = Inputs.radio(
+  ["a", "b", "c", "d"],
+  {
+    value: null,
+    label: html`<b></b>`,
+    format: x => ({
+      a: "50 minutes",
+      b: "83.3 minutes",
+      c: "120 minutes",
+      d: "12 minutes"
+    })[x]
+  }
+)
+```
+
+```{ojs}
+//| echo: false
+q6_feedback = {
+  if (q6_answer == null) return html`<i>Please select one option.</i>`;
+  const row = await db.sql`SELECT correct_id FROM quiz_answers WHERE question_id = 'q6'`;
+  return q6_answer === row.correct_id
+    ? html`<span style="color: green; font-weight: bold;">Correct!</span>`
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
+}
+```
+
+<div style="margin-top: 1rem;">
+  ${q6_feedback}
+</div>
+
+------------------------------------------------------------------------
+
+## Question 7: mMET Values
+
+**Which travel mode has a higher mMET value for physical activity?**
+
+```{ojs}
+//| echo: false
+viewof q7_answer = Inputs.radio(
+  ["a", "b", "c", "d"],
+  {
+    value: null,
+    label: html`<b></b>`,
+    format: x => ({
+      a: "Walking (2.5 mMET)",
+      b: "Cycling (5.8 mMET)",
+      c: "They are equal",
+      d: "Cannot be determined"
+    })[x]
+  }
+)
+```
+
+```{ojs}
+//| echo: false
+q7_feedback = {
+  if (q7_answer == null) return html`<i>Please select one option.</i>`;
+  const row = await db.sql`SELECT correct_id FROM quiz_answers WHERE question_id = 'q7'`;
+  return q7_answer === row.correct_id
+    ? html`<span style="color: green; font-weight: bold;">Correct!</span>`
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
+}
+```
+
+<div style="margin-top: 1rem;">
+  ${q7_feedback}
+</div>
+
+------------------------------------------------------------------------
+
+## Question 8: Active Travel Modes
+
+**In this practical, which modes are classified as active travel?**
+
+```{ojs}
+//| echo: false
+viewof q8_answer = Inputs.radio(
+  ["a", "b", "c", "d"],
+  {
+    value: null,
+    label: html`<b></b>`,
+    format: x => ({
+      a: "Bus and Car",
+      b: "Pedestrian and Car",
+      c: "Cycle and Pedestrian",
+      d: "Motorcycle and Bus"
+    })[x]
+  }
+)
+```
+
+```{ojs}
+//| echo: false
+q8_feedback = {
+  if (q8_answer == null) return html`<i>Please select one option.</i>`;
+  const row = await db.sql`SELECT 
