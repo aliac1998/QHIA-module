@@ -146,7 +146,7 @@ q1_mode_feedback = {
   if (q1_mode_answer == null) return html`<i>Please select one option.</i>`;
   return q1_mode_answer === "bus"
     ? html`<span style="color: green; font-weight: bold;">Correct! The bus mode has the highest share of trips.</span>`
-    : html`<span style="color: red; font-weight: bold;">Incorrect. The correct answer is Bus - it has the highest share of trips.</span>`;
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
 }
 ```
 
@@ -180,7 +180,7 @@ q2_combined_feedback = {
   const isCorrect = Math.abs(userValue - q2_combined_answer) <= 0.1;
   return isCorrect
     ? html`<span style="color: green; font-weight: bold;">Correct! Bus (${q2_combined_answer}%) has the highest individual share.</span>`
-    : html`<span style="color: red; font-weight: bold;">Incorrect. The combined share of bus and pedestrian is approximately ${q2_combined_answer}%.</span>`;
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
 }
 ```
 
@@ -306,7 +306,7 @@ q3_feedback = {
   if (q3_answer == null) return html`<i>Please select one option.</i>`;
   return q3_answer === "b"
     ? html`<span style="color: green; font-weight: bold;">Correct! The distance categories are 0-2km, 2-6km, and 6+km.</span>`
-    : html`<span style="color: red; font-weight: bold;">Incorrect. The correct answer is 0-2km, 2-6km, 6+km.</span>`;
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
 }
 ```
 
@@ -343,7 +343,7 @@ q4_feedback = {
   if (q4_answer == null) return html`<i>Please select one option.</i>`;
   return q4_answer === "b"
     ? html`<span style="color: green; font-weight: bold;">Correct! The y-axis represents the proportion of trips.</span>`
-    : html`<span style="color: red; font-weight: bold;">Incorrect. The y-axis represents the proportion of trips.</span>`;
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
 }
 ```
 
@@ -400,7 +400,7 @@ q10_a_feedback = {
   if (q10_a_answer == null) return html`<i>Please select one option.</i>`;
   return q10_a_answer === "b"
     ? html`<span style="color: green; font-weight: bold;">Correct! (10% × 80%) / 60% = 13.33% of non-cycling trips in band A must be converted.</span>`
-    : html`<span style="color: red; font-weight: bold;">Incorrect. The correct formula is (10% × 80%) / 60% = 13.33%. This converts 13.33% of non-cycling trips in band A to cycling.</span>`;
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
 }
 ```
 
@@ -436,7 +436,7 @@ q10_b_feedback = {
   const isCorrect = Math.abs(userValue - q10_b_answer) <= 0.1;
   return isCorrect
     ? html`<span style="color: green; font-weight: bold;">Correct! (10% × 20%) / 40% = 5.00% of non-cycling trips in band B must be converted.</span>`
-    : html`<span style="color: red; font-weight: bold;">Incorrect. The formula is (10% × 20%) / 40% = 5.00%. 5.00% of non-cycling trips in band B need to convert to cycling.</span>`;
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
 }
 ```
 
@@ -540,7 +540,7 @@ q5_feedback = {
   if (q5_answer == null) return html`<i>Please select one option.</i>`;
   return q5_answer === "a"
     ? html`<span style="color: green; font-weight: bold;">Correct! trips_ped_scen <- trips_baseline creates a copy of the baseline scenario.</span>`
-    : html`<span style="color: red; font-weight: bold;">Incorrect. The correct answer is trips_ped_scen <- trips_baseline.</span>`;
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
 }
 ```
 
@@ -597,7 +597,7 @@ q6_feedback = {
   if (q6_answer == null) return html`<i>Please select one option.</i>`;
   return q6_answer === "b"
     ? html`<span style="color: green; font-weight: bold;">Correct! This converts only non-pedestrian trips in the 0-2km category to pedestrian mode.</span>`
-    : html`<span style="color: red; font-weight: bold;">Incorrect. The correct answer is: Converts only non-pedestrian trips in the 0-2km category to pedestrian mode.</span>`;
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again. </span>`;
 }
 ```
 
@@ -648,7 +648,7 @@ q7_feedback = {
   if (q7_answer == null) return html`<i>Please select one option.</i>`;
   return q7_answer === "c"
     ? html`<span style="color: green; font-weight: bold;">Correct! 5 km × 60 / 2.5 = 120 minutes.</span>`
-    : html`<span style="color: red; font-weight: bold;">Incorrect. The correct answer is 120 minutes (5 × 60 / 2.5 = 120).</span>`;
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
 }
 ```
 
@@ -726,7 +726,7 @@ q8_feedback = {
   if (q8_answer == null) return html`<i>Please select one option.</i>`;
   return q8_answer === "c"
     ? html`<span style="color: green; font-weight: bold;">Correct! Cycle and Pedestrian are classified as active travel modes.</span>`
-    : html`<span style="color: red; font-weight: bold;">Incorrect. The correct answer is Cycle and Pedestrian.</span>`;
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again. </span>`;
 }
 ```
 
@@ -740,6 +740,8 @@ q8_feedback = {
 Using duration and marginal MET hours per week per walking and cycling, calculate travel related PA volume
 
 ```{r}
+#| code-fold: false
+
 # Initialize walking and cycling MMET hours per week
 WALKING_MMET <- 2.5
 CYCLING_MMET <- 5.8
@@ -771,8 +773,8 @@ viewof q9_answer = Inputs.radio(
     value: null,
     label: html`<b></b>`,
     format: x => ({
-      a: "Walking (2.5 mMET)",
-      b: "Cycling (5.8 mMET)",
+      a: "Walking",
+      b: "Cycling",
       c: "They are equal",
       d: "Cannot be determined"
     })[x]
@@ -786,7 +788,7 @@ q9_feedback = {
   if (q9_answer == null) return html`<i>Please select one option.</i>`;
   return q9_answer === "b"
     ? html`<span style="color: green; font-weight: bold;">Correct! Cycling (5.8 mMET) has a higher mMET value than Walking (2.5 mMET).</span>`
-    : html`<span style="color: red; font-weight: bold;">Incorrect. The correct answer is Cycling (5.8 mMET).</span>`;
+    : html`<span style="color: red; font-weight: bold;">Incorrect. Try again. </span>`;
 }
 ```
 
@@ -800,11 +802,9 @@ q9_feedback = {
 Bring background PA volume from `base_pop` dataset
 
 ```{r}
+#| code-fold: false
 # Create mmet per person variable that brings in background PA volume from `base_pop` dataset. Use that as the starting point since it has people without travel as well.
 
-# Create mmet per person variable that brings in background PA volume from `base_pop` dataset
-
-# Multiply the base_pop by 2, to repeat everyone for the two scenarios, and then join it with travel_mmets
 mmets_pp <- io$bogota$base_pop %>%
     select(participant_id, work_ltpa_marg_met) %>%
     crossing(scenario = c("baseline", "sc_ped")) |> 
@@ -820,7 +820,7 @@ mmets_pp$total_travel_mmets[is.na(mmets_pp$total_travel_mmets)] <- 0
 Following the approach established in prior exercises, travel and background PA volumes are aggregated
 
 ```{r}
-
+#| code-fold: false
 # Join travel and background PA volume together
 mmets_pp_total <- mmets_pp |> 
   mutate(total_mmets = total_travel_mmets + work_ltpa_marg_met )
@@ -833,15 +833,13 @@ mmets_pp_total <- mmets_pp |>
 The dataset structure is transformed from `long` to `wide` format. The variable storing total mMET hours per week can be identified using `names(mmets_pp_total)` in the console.
 
 ```{r}
-
+#| code-fold: false
 # Read in the total mMET hours per week and change its orientation from long to wide format
 mmets_pp_total_wide <- mmets_pp_total |> 
   # Remove columns that we are not interested in
   dplyr::select(-c(total_travel_mmets, work_ltpa_marg_met)) |> 
   # Take values from scenario and the variable that holds total mmets
   pivot_wider(names_from = scenario, values_from = total_mmets)
-
-#write_csv(mmets_pp_total_wide, here("data/lecture_5_6/mmets_bogota.csv"))
 
 head(mmets_pp_total_wide)
 
