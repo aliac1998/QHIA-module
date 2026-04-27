@@ -1,8 +1,9 @@
 ---
 title: "Practicals: lecture 3"
-subtitle: "Creating scenarios"
+subtitle: "Scenarios and Health Impact Assessment (HIA)"
 author: "Ali Abbas"
 editor: visual
+date: 28/04/2026
 toc: true
 lightbox: true
 format: 
@@ -65,9 +66,9 @@ mode_colours <- c("pedestrian" = '#99d8c9',
 
 ```
 
-# Baseline travel behaviour
+## Baseline travel behaviour
 
-## Trip distribution by mode
+### Trip distribution by mode
 
 Prior to scenario creation, this section examines the distribution of trips across different modes within the baseline travel behaviour.
 
@@ -117,7 +118,7 @@ trip_dist |>
 The bus mode exhibits the highest share at `r round(trip_dist$bus * 100, 1)`(%), while the other category demonstrates the lowest share at `r round(trip_dist$other * 100, 1)`(%).
 
 ::::: {.callout-tip title="Quick Quiz" appearance="minimal"}
-### Question 1: Mode with Highest Share
+#### Question 1: Mode with Highest Share
 
 Based on the percentage distribution table above, which travel mode has the **highest share** of trips?
 
@@ -156,7 +157,7 @@ q1_mode_feedback = {
 
 ------------------------------------------------------------------------
 
-### Question 2: Combined Mode Share
+#### Question 2: Combined Mode Share
 
 What is the **combined percentage share** of `bus` and `pedestrian` modes together? Enter the value rounded to one decimal place (e.g., 50.0).
 
@@ -189,7 +190,7 @@ q2_combined_feedback = {
 :::
 :::::
 
-### Distribution using Cumulative Distribution Function (CDF)
+#### Distribution using Cumulative Distribution Function (CDF)
 
 We have defined three distance categories, which are:
 
@@ -229,7 +230,7 @@ These categories are derived from domain expertise and empirical distance distri
                   font = list(size = 12))
 ```
 
-### Table with distance categories
+#### Table with distance categories
 
 ```{r}
 # Read in the trips dataset
@@ -279,7 +280,7 @@ trips_tbl |>
 ```
 
 ::::: {.callout-tip title="Quick Quiz" appearance="minimal"}
-### Question 3: Distance Categories
+#### Question 3: Distance Categories
 
 **What are the three distance categories defined in this practical?**
 
@@ -316,7 +317,7 @@ q3_feedback = {
 
 ------------------------------------------------------------------------
 
-### Question 4: CDF Interpretation
+#### Question 4: CDF Interpretation
 
 **In the CDF plot, what does the y-axis represent?**
 
@@ -352,9 +353,9 @@ q4_feedback = {
 :::
 :::::
 
-## Mechanistic Overview
+### Mechanistic Overview
 
-### Example of `5%` increase in cycling mode
+#### Example of `5%` increase in cycling mode
 
 Assume that there are only two distance bands `A` and `B` and that `80%` of all `cycling` trips lie in distance band `A` and the remaining `20%` in distance band `B`. In terms of overall trips, assume that `60%` of all trips are in distance band `A` and `40%` in distance band `B`.
 
@@ -371,7 +372,7 @@ Based on the example above, let's extend the scenario to achieve a **10%** incre
 
 ------------------------------------------------------------------------
 
-### Question 1: Band A Conversion
+#### Question 1: Band A Conversion
 
 **To achieve a 10% increase in cycling mode share, what percentage of non-cycling trips in distance band A must be converted to cycling?**
 
@@ -410,7 +411,7 @@ q10_a_feedback = {
 
 ------------------------------------------------------------------------
 
-### Question 2: Band B Calculation
+#### Question 2: Band B Calculation
 
 **Calculate the percentage of non-cycling trips in distance band B that must be converted to cycling for a 10% increase. Round your answer to two decimal places.**
 
@@ -446,7 +447,7 @@ q10_b_feedback = {
 
 ------------------------------------------------------------------------
 
-### Question 3: Preservation Check
+#### Question 3: Preservation Check
 
 **If the 10% cycling increase is successful whilst preserving the intra-band cycling distribution, what happens to the cycling mode share within distance band A?**
 
@@ -549,7 +550,7 @@ q5_feedback = {
 :::
 ::::
 
-## Now change trips to `pedestrian` mode
+### Now change trips to `pedestrian` mode
 
 All trips within the `0-2km` distance category are converted to `pedestrian` mode. The distance category and target mode are specified below.
 
@@ -565,7 +566,7 @@ trips_ped_scen[trips_ped_scen$trip_mode == "pedestrian"]$stage_mode <- 'pedestri
 ```
 
 :::: {.callout-tip title="Quick Quiz" appearance="minimal"}
-### Question 6: Mode Conversion
+#### Question 6: Mode Conversion
 
 **What does this code achieve?**
 
@@ -606,7 +607,7 @@ q6_feedback = {
 :::
 ::::
 
-## Recalculate duration
+### Recalculate duration
 
 Calculate duration using walking speed and distance (which doesn't change when trips are switched to `pedestrian` mode)
 
@@ -621,7 +622,7 @@ trips_ped_scen[trips_ped_scen$trip_mode == "pedestrian"]$stage_duration <- trips
 ```
 
 :::: {.callout-tip title="Quick Quiz" appearance="minimal"}
-### Question 7: Duration Calculation
+#### Question 7: Duration Calculation
 
 **Using the formula `duration (mins) = distance (km) × 60 / walking_speed`, calculate the duration for a 5 km trip when `WALKING_SPEED = 2.5`.**
 
@@ -657,7 +658,7 @@ q7_feedback = {
 :::
 ::::
 
-## Assign a new name to the `pedestrian` scenario
+### Assign a new name to the `pedestrian` scenario
 
 Assign a name to the scenario. Use the same nomenclature as previous exercises with `sc_` followed by scenario name.
 
@@ -665,7 +666,7 @@ Assign a name to the scenario. Use the same nomenclature as previous exercises w
 trips_ped_scen$scenario <- 'sc_ped'
 ```
 
-## Combine the two trip datasets
+### Combine the two trip datasets
 
 Create a new trips dataset where we join both `baseline` and `pedestrian` scenarios together. Use `rbind` function.
 
@@ -676,7 +677,7 @@ ntrips <- rbind(trips_baseline, trips_ped_scen)
 head(ntrips)
 ```
 
-## Calculate duration of active travel for each participant
+### Calculate duration of active travel for each participant
 
 Calculate duration of active travel for each participant using the newly created `ntrips` dataset. Active travel modes are: `cycle` and `pedestrian`
 
@@ -699,7 +700,7 @@ head(active_travel_duration)
 ```
 
 :::: {.callout-tip title="Quick Quiz" appearance="minimal"}
-### Question 8: Active Travel Modes
+#### Question 8: Active Travel Modes
 
 **In this practical, which modes are classified as active travel?**
 
@@ -735,7 +736,7 @@ q8_feedback = {
 :::
 ::::
 
-## Convert duration to mMET hours per week
+### Convert duration to mMET hours per week
 
 Using duration and marginal MET hours per week per walking and cycling, calculate travel related PA volume
 
@@ -761,7 +762,7 @@ head(travel_mmets)
 ```
 
 :::: {.callout-tip title="Quick Quiz" appearance="minimal"}
-### Question 9: mMET Values
+#### Question 9: mMET Values
 
 **Which travel mode has a higher mMET value for physical activity?**
 
@@ -797,7 +798,7 @@ q9_feedback = {
 :::
 ::::
 
-## Bring in background PA volume in mMET hours per week from `base_pop`
+### Bring in background PA volume in mMET hours per week from `base_pop`
 
 Bring background PA volume from `base_pop` dataset
 
@@ -815,7 +816,7 @@ mmets_pp$total_travel_mmets[is.na(mmets_pp$total_travel_mmets)] <- 0
 
 ```
 
-## Combine travel and background PA volume
+### Combine travel and background PA volume
 
 Following the approach established in prior exercises, travel and background PA volumes are aggregated
 
@@ -828,7 +829,7 @@ mmets_pp_total <- mmets_pp |>
 
 ```
 
-## Change the structure to `wide` format
+### Change the structure to `wide` format
 
 The dataset structure is transformed from `long` to `wide` format. The variable storing total mMET hours per week can be identified using `names(mmets_pp_total)` in the console.
 
@@ -845,7 +846,7 @@ head(mmets_pp_total_wide)
 
 ```
 
-## Distribution of Scenarios
+### Distribution of Scenarios
 
 The cumulative distribution of both scenarios is presented below to illustrate where changes have occurred.
 
@@ -898,11 +899,11 @@ mode_colours <- c("pedestrian" = '#99d8c9',
 
 ```
 
-# Exposure Analysis: PA
+## Exposure Analysis: PA
 
 This section provides a comprehensive examination of physical activity (PA) across age and sex groups.
 
-## PA distribution by Scenario, Age Category and Sex
+### PA distribution by Scenario, Age Category and Sex
 
 The following analysis presents the distribution of PA volume, as output from the model, stratified by scenario, age category and sex group.
 
@@ -944,32 +945,40 @@ The following analysis examines a randomly selected participant whose PA volume 
 The `seed` parameter may be modified to select an alternative participant.
 
 ```{r}
+#| code-fold: false
+
+# Set seed
 set.seed(2)
+
+# Pick 1 random participant_id where baseline PA is less than the pedestrian's scenario 
 sample_participant_id <- mmets_pp_total_wide |> 
   filter(baseline < sc_ped) |> 
   dplyr::select(participant_id) |> 
   sample_n(1) |> 
   as.numeric()
 
+# Filter trip dataset for that particular id and show their trips
 trip_sample_participant <- io$bogota$trip_scen_sets |> 
   filter(participant_id == sample_participant_id)
 
-trip_sample_participant
+head(trip_sample_participant |> arrange(scenario))
 
 ```
 
-## Exposure-Response and Dose-Response Calculations
+### Exposure-Response and Dose-Response Calculations
 
 This section presents the calculation of exposure-response and dose-response relationships against behaviours for each individual, encompassing only Physical Activity(PA).
 
-### PA Dose-Response
+#### PA Dose-Response
 
 The `all-cause-mortality` dose-response relationship is applied in this analysis.
 
 [![All cause mortality dose-response curve](images/pa-all-cause.png){fig-align="center"}](https://shiny.mrc-epid.cam.ac.uk/meta-analyses-physical-activity/)
 
 ```{r}
+#| code-fold: false
 
+# Use the DRPA package to calculate RRs for the PA using all-cause-mortality dose-response function
 RR_pa <- mmets_pp_total_wide |> 
   tidyr::pivot_longer(cols = c(baseline, sc_ped)) |> 
   mutate(rr_pa = drpa::dose_response(cause = "all-cause-mortality", 
@@ -984,16 +993,16 @@ RR_pa <- mmets_pp_total_wide |>
   ))
 
 
-RR_pa
+head(RR_pa)
 
 ```
 
-### Age and Sex Stratified Combined RRs
+#### Age and Sex Stratified Combined RRs
 
 Following the approach established in prior exercises, the aggregate sum of relative risk is calculated by `age_cat` and `sex`.
 
 ```{r}
-
+#| code-fold: false
 
 grouped_RR <- RR_pa |> group_by(sex, age_cat, scenario) |> summarise(rr = sum(rr_pa))
 
@@ -1001,13 +1010,14 @@ grouped_RR
 
 ```
 
-# Potential Impact Fraction (PIF)
+### Potential Impact Fraction (PIF)
 
 Using the combined relative risk stratified by `age_cat` and `sex`, the Potential Impact Fraction is calculated as follows:
 
 $$pif = \frac{RR_{base} - RR_{scenario}}{RR_{base}}$$
 
 ```{r}
+#| code-fold: false
 
 pif <- grouped_RR |> mutate(pif = (rr[scenario == "Baseline"] - rr) / rr[scenario == "Baseline"])
 
@@ -1015,7 +1025,7 @@ pif
 
 ```
 
-## Disease Burden Data
+#### Disease Burden Data
 
 City-specific burden data, typically sourced from the [Global Burden of Disease (GBD)](https://www.healthdata.org/research-analysis/gbd) database, is stored at `io$bogota$disease_burden`.
 
@@ -1027,25 +1037,26 @@ hb
 
 ```
 
-### Filtering for Relevant Causes
+#### Filtering for Relevant Causes
 
 The data is filtered to retain only `All causes` as the `cause` variable and `Deaths` as the measure.
 
 ```{r}
-
+#| code-fold: false
 hb <- hb |> filter(measure == "Deaths", cause == "All causes")
 
 hb
 
 ```
 
-# Health Impacts
+### Health Impacts
 
-## Health Impact Estimation Using PIFs and Burden Data
+#### Health Impact Estimation Using PIFs and Burden Data
 
 The PIF for each `age_cat` (5-year age category) and `sex` is multiplied by the burden data to calculate the health burden under each scenario.
 
 ```{r}
+#| code-fold: false
 
 health_impact <- pif |> 
   left_join(hb |> 
@@ -1058,11 +1069,12 @@ health_impact
 
 ```
 
-## Total Averted Deaths by Scenario
+#### Total Averted Deaths by Scenario
 
 The health impact for each scenario is aggregated to calculate the total number of averted deaths. Positive values indicate deaths averted, whereas negative values indicate deaths attributable to the scenario.
 
 ```{r}
+#| code-fold: false
 
 health_impact |> group_by(scenario) |> summarise(averted_deaths = sum(health_impact))
 
@@ -1242,8 +1254,6 @@ viewof q5_health_impact_answer = Inputs.radio(
 //| echo: false
   q5_health_impact_feedback = {   if (q5_health_impact_answer == null) return html`<i>Please select one option.</i>`;   
   return q5_health_impact_answer === "C" 
-  
-  return q4_disease_answer === "C"
     ? html`<span style="color: green; font-weight: bold;">Correct! PIF × disease burden gives health impact.</span>`
     : html`<span style="color: red; font-weight: bold;">Incorrect. Try again.</span>`;
 }
