@@ -61,7 +61,7 @@ gbd_raw <- read_csv(GBD_FILE)
 # Standardise column names: strip "_name" and "_id" suffixes
 names(gbd_raw) <- gsub("_name$", "", names(gbd_raw))
 gbd <- gbd_raw %>%
-  select(-contains("_id"))
+  dplyr::select(-contains("_id"))
 
 # Keep only the diseases we want and attach short names
 gbd <- gbd %>%
@@ -78,7 +78,7 @@ gbd <- gbd %>%
 
 # Pivot Rate / Number into columns, convert rate to per-1 (GBD gives per 100,000)
 gbd_wide <- gbd %>%
-  select(-upper, -lower) %>%
+  dplyr::select(-upper, -lower) %>%
   pivot_wider(names_from = "metric", values_from = "val") %>%
   mutate(
     rate = rate / 100000,
@@ -88,11 +88,11 @@ gbd_wide <- gbd %>%
 # Derive population from all-cause deaths (most stable denominator)
 gbd_pop <- gbd_wide %>%
   filter(sname == "allc", measure == "Deaths") %>%
-  select(age, sex, pop)
+  dplyr::select(age, sex, pop)
 
 # Full rate table joined to consistent population 
 gbd_rate <- gbd_wide %>%
-  select(-pop) %>%
+  dplyr::select(-pop) %>%
   left_join(gbd_pop, by = c("age", "sex")) %>%
   # Drop younger ages (MSLT models adults)
   filter(!age %in% c("<5 years", "5-9 years", "10-14 years")) %>%
@@ -130,7 +130,7 @@ gbd_wider <- gbd_rate %>%
 
 # Residual all-cause YLD rate not explained by modelled diseases
 all_disease_yld_count <- gbd_wider %>%
-  select(matches("^ylds_number_(?!allc)", perl = TRUE)) %>%
+  dplyr::select(matches("^ylds_number_(?!allc)", perl = TRUE)) %>%
   rowSums(na.rm = TRUE)
 
 gbd_wider <- gbd_wider %>%
@@ -149,7 +149,7 @@ gbd_raw_db <- read_csv(GBD_FILE)
 names(gbd_raw_db) <- gsub("_name$", "", names(gbd_raw_db))
 
 gbd_db_prep <- gbd_raw_db %>%
-  select(-contains("_id")) %>%
+  dplyr::select(-contains("_id")) %>%
   inner_join(DISEASE_MAP, by = c("cause" = "gbd_name")) %>%
   filter(sname != "allc") %>%
   mutate(
@@ -187,7 +187,7 @@ gbd_db_prep <- gbd_raw_db %>%
 
 # Population size per age-sex-cause (for capping denominators)
 gbd_num_db <- gbd_raw_db %>%
-  select(-contains("_id")) %>%
+  dplyr::select(-contains("_id")) %>%
   inner_join(DISEASE_MAP, by = c("cause" = "gbd_name")) %>%
   filter(sname != "allc") %>%
   mutate(
@@ -201,7 +201,7 @@ gbd_num_db <- gbd_raw_db %>%
   ) %>%
   filter(metric == "number",
          measure %in% c("Deaths", "Incidence", "Prevalence")) %>%
-  select(measure, sex, age, cause, sname, Number = val)
+  dplyr::select(measure, sex, age, cause, sname, Number = val)
 
 gbd_db_prep <- gbd_db_prep %>%
   left_join(
@@ -239,7 +239,7 @@ gbd_db_prep <- gbd_db_prep %>%
     denom      = if_else(is.na(denom) | denom > pop_actual, pop_actual, denom),
     num        = if_else(is.na(num), round(val * denom), num)
   ) %>%
-  select(-rowid)
+  dplyr::select(-rowid)
 
 # Disaggregate 5-year groups to 1-year using tempdisagg
 message("Disaggregating 5-year age groups to 1-year...")
@@ -269,23 +269,23 @@ gbd_disagg_smooth <- group_modify(gbd_grp, disagg_fn) %>% ungroup()
 
 # Fall back to simple /5 for any groups that produced negatives
 neg_num   <- gbd_disagg_smooth %>% filter(num   < 0) %>%
-  select(measure, sex, sname, agegroup = from_age) %>% distinct() %>%
+  dplyr::select(measure, sex, sname, agegroup = from_age) %>% distinct() %>%
   mutate(fix_num = TRUE)
 neg_denom <- gbd_disagg_smooth %>% filter(denom < 0) %>%
-  select(measure, sex, sname, agegroup = from_age) %>% distinct() %>%
+  dplyr::select(measure, sex, sname, agegroup = from_age) %>% distinct() %>%
   mutate(fix_denom = TRUE)
 
 gbd_disagg <- gbd_disagg_smooth %>%
   rename(ageyr = from_age) %>%
   left_join(
-    gbd_db_prep %>% select(measure, sex, sname, from_age, num1yr, denom1yr),
+    gbd_db_prep %>% dplyr::select(measure, sex, sname, from_age, num1yr, denom1yr),
     by = c("measure", "sex", "sname", "ageyr" = "from_age")
   ) %>%
   mutate(
     num   = if_else(num   < 0, num1yr,   round(num)),
     denom = if_else(denom < 0, denom1yr, round(denom))
   ) %>%
-  select(measure, sex, sname, age = ageyr, num, denom)
+  dplyr::select(measure, sex, sname, age = ageyr, num, denom)
 
 # -----------------------------------------------------------------------------
 # FIX 1: Enforce num/denom consistency before handing data to disbayes.
@@ -392,7 +392,7 @@ gbddb <- gbddb %>%
     rem_num = if_else(rem_denom > 0 & rem_num > rem_denom, rem_denom, rem_num),
     rem_num = if_else(is.na(rem_num), 0L, rem_num)
   ) %>%
-  select(-recovery_yrs)
+  dplyr::select(-recovery_yrs)
 
 message("Synthetic remission data added:")
 for (d in names(RECOVERY_YEARS)) {
@@ -436,7 +436,7 @@ if (CONSTRAIN_DMT2) {
       rem_rate = ifelse(sname == "dmt2" & age >= 15, pmin(rem_rate, 0.01), rem_rate),
       rem_num = ifelse(rem_denom > 0, floor(rem_rate * rem_denom), 0L)
     ) %>%
-    select(-inc_rate, -cf_rate, -rem_rate)
+    dplyr::select(-inc_rate, -cf_rate, -rem_rate)
   
   
   message("GBD-style value priors applied to DMT2 only:")
@@ -619,7 +619,7 @@ interpolate_log <- function(values_at_cats) {
 
 # Join gbd_wider to scaffold via age_cat
 gbd_for_interp <- gbd_wider %>%
-  select(age_cat, sex, pop, pyld_rate,
+  dplyr::select(age_cat, sex, pop, pyld_rate,
          matches("^(deaths|ylds)_(rate|number)_"),
          matches("^prevalence_(rate|number)_")) %>%
   mutate(sex = tolower(sex)) %>%
@@ -644,7 +644,7 @@ result_list <- map(c("male", "female"), function(sx) {
     v
   }
 
-  out <- mslt_scaffold %>% filter(sex == sx) %>% select(age, sex, age_sex)
+  out <- mslt_scaffold %>% filter(sex == sx) %>% dplyr::select(age, sex, age_sex)
 
   # Population: use value at midpoint; NA elsewhere
   pop_vec  <- get_vec("pop")
@@ -708,7 +708,7 @@ disbayes_tidy <- disbayes_output %>%
   )
 
 mslt_final <- mslt_base %>%
-  left_join(disbayes_tidy %>% select(-sex, -age), by = "age_sex") %>%
+  left_join(disbayes_tidy %>% dplyr::select(-sex, -age), by = "age_sex") %>%
   # Only replace NAs with 0 for specific columns, not prevalence
   mutate(across(c(matches("^(deaths|ylds|incidence|case_fatality|remission|pyld|mx|population)"),
                   -matches("^prevalence")),

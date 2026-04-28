@@ -240,9 +240,9 @@ RunDisease <- function(in_data,
                        in_sex,
                        in_mid_age,
                        in_disease,
-                       inc_trend       = NA,  # % annual change in incidence (compounding)
-                       cf_trend        = NA,  # % annual change in case fatality (compounding)
-                       rem_trend       = NA,  # % annual change in remission (compounding)
+                       inc_trend       = NA,  # % annual change in incidence 
+                       cf_trend        = NA,  # % annual change in case fatality 
+                       rem_trend       = NA,  # % annual change in remission 
                        inc_trend_years = NA,  # years to apply inc_trend (NA = no cap)
                        cf_trend_years  = NA,  # years to apply cf_trend  (NA = no cap)
                        rem_trend_years = NA,  # years to apply rem_trend (NA = no cap)
@@ -379,8 +379,8 @@ RunDisease <- function(in_data,
   # lx = incidence + case_fatality + remission (total hazard leaving diseased state)
   # qx = sqrt((incidence + remission - case_fatality)^2 + 4*incidence*remission)
   lx <- incidence_disease + case_fatality_disease + remission_disease
-  qx <- sqrt((incidence_disease + remission_disease - case_fatality_disease)^2 + 
-             4 * incidence_disease * remission_disease)
+  qx <- sqrt((incidence_disease + remission_disease + case_fatality_disease)^2 - 
+               4 * incidence_disease * case_fatality_disease)
   wx <- exp(-1 * (lx + qx) / 2)
   vx <- exp(-1 * (lx - qx) / 2)
   

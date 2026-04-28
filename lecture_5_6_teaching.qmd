@@ -77,7 +77,7 @@ This file contains the Bogotá study population with marginal MET-hours baseline
 ```{r}
 #| label: load-bogota
 
-io <- readRDS("data/lecture_3/ithim_io/io.rds")
+io <- readRDS("data/lecture_3/ithim_io/io.rds") ### REPLACE after ALI fixes. 
 base_pop <- io$bogota$base_pop
 travel_mmets <- read_csv("data/lecture_5_6/mmets_bogota.csv")
 
