@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Dr Belen Zapata-Diomedi, IMS Epidemiology Unit">
-<meta name="dcterms.date" content="2026-04-20">
+<meta name="dcterms.date" content="2026-04-29">
 
 <title>Quantitative Health Impact Assessment</title>
 <style>
@@ -2365,7 +2365,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">April 20, 2026</p>
+      <p class="date">April 29, 2026</p>
     </div>
   </div>
   
@@ -2497,10 +2497,10 @@ Prevalence of inactivity reduced from 50% to 40% by an intervention.</p>
 <span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co"># --- PIF formula (Barendregt &amp; Veerman, 2010) ---</span></span>
 <span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>PIF <span class="ot">&lt;-</span> (p <span class="sc">*</span> (RR <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">-</span> p_cf <span class="sc">*</span> (RR <span class="sc">-</span> <span class="dv">1</span>)) <span class="sc">/</span> (p <span class="sc">*</span> (RR <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">+</span> <span class="dv">1</span>)</span>
 <span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;PIF =&quot;</span>, <span class="fu">round</span>(PIF, <span class="dv">4</span>), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;PIF =&quot;</span>, <span class="fu">round</span>(PIF, <span class="dv">8</span>), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>PIF = 0.0238 </code></pre>
+<pre><code>PIF = 0.02378855 </code></pre>
 </div>
 <details open class="code-fold">
 <summary>Code</summary>
@@ -2670,7 +2670,7 @@ Interpretations
 </div>
 <div class="callout-body-container callout-body">
 <p><strong>Scenario (PIF = 3.07%):</strong> If inactive people decrease from 17% to 10% — redistributing into low and moderately active categories — 3.07% of IHD burden would be prevented. This is a realistic policy scenario.</p>
-<p><strong>Burden (PAF = 27%):</strong> If everyone were highly active, 27% of IHD deaths would not occur. This is the theoretical maximum preventable fraction — useful for establishing public health importance, not as a policy target.</p>
+<p><strong>Burden (PAF = 27%):</strong> If everyone were highly active, 27% of IHD deaths would not occur (or the burden of physical inactivity for IHD mortality is . %). This is the theoretical maximum preventable fraction — useful for establishing public health importance, not as a policy target.</p>
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled">
@@ -3136,10 +3136,11 @@ Key assumption
 <span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a><span class="co"># deaths_baseline = 28</span></span>
 <span id="cb63-5"><a href="#cb63-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb63-6"><a href="#cb63-6" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Apply PIF/PAF to baseline deaths ────────────────────────────────────────────</span></span>
-<span id="cb63-7"><a href="#cb63-7" aria-hidden="true" tabindex="-1"></a>deaths_prevented    <span class="ot">&lt;-</span> <span class="fu">round</span>(deaths_baseline <span class="sc">*</span> PIF_scenario, <span class="dv">1</span>)</span>
+<span id="cb63-7"><a href="#cb63-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb63-8"><a href="#cb63-8" aria-hidden="true" tabindex="-1"></a>deaths_attributable <span class="ot">&lt;-</span> <span class="fu">round</span>(deaths_baseline <span class="sc">*</span> PAF_tmrel, <span class="dv">1</span>)</span>
-<span id="cb63-9"><a href="#cb63-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb63-10"><a href="#cb63-10" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;── Burden of Disease ──────────────────────────────────────────────</span><span class="sc">\n</span><span class="st">&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb63-9"><a href="#cb63-9" aria-hidden="true" tabindex="-1"></a>deaths_prevented    <span class="ot">&lt;-</span> <span class="fu">round</span>(deaths_baseline <span class="sc">*</span> PIF_scenario, <span class="dv">1</span>)</span>
+<span id="cb63-10"><a href="#cb63-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb63-11"><a href="#cb63-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;── Burden of Disease ──────────────────────────────────────────────</span><span class="sc">\n</span><span class="st">&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>── Burden of Disease ──────────────────────────────────────────────</code></pre>
@@ -3229,26 +3230,13 @@ Interpretations
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p><strong>Burden of Disease (PAF = 27%):</strong> Approximately 8 IHD deaths per year are attributable to physical inactivity in this population. This is the theoretical ceiling — comparing current levels to the ideal of everyone being highly active. It is not a realistic policy target, but it establishes the public health importance of the risk factor.</p>
-<p><strong>Scenario Analysis (PIF = 3.07%):</strong> A realistic intervention shifting inactive people toward more active categories would prevent approximately <strong>1 IHD death per year</strong>. The modest effect reflects that: (i) the distributional shift is small; (ii) people shift to adjacent categories, not all the way to highly active; and (iii) a large share of the burden sits with those already partially active.</p>
-</div>
-</div>
-<div class="callout callout-style-default callout-important callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-The gap is the key teaching point
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>The intervention captures only ~11% of the maximum preventable burden. This motivates why sustained, population-wide activity shifts — rather than small nudges — are needed to make a meaningful dent in attributable burden.</p>
+<p><strong>Burden of Disease (PAF = 27%):</strong> Approximately 8 IHD deaths per year are attributable to physical inactivity in this population. This is the theoretical ceiling — comparing current levels to the ideal of everyone being highly active. It is not a realistic policy target, but it establishes the public health importance of the risk factor and indicates how much of the disease can be attributed to physical inactivity.</p>
+<p><strong>Scenario Analysis (PIF = 3.07%):</strong> A realistic intervention shifting inactive people toward more active categories would prevent approximately <strong>1 IHD death per year</strong>. The modest effect reflects that: (i) the distributional shift is small; (ii) people shift to adjacent categories, not all the way to highly active; and (iii) burden of IHD in 30-34 is relatively small in comparison with other age groups.</p>
 </div>
 </div>
 <p>testing difference</p>
 <div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-13-contents" aria-controls="callout-13" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-12-contents" aria-controls="callout-12" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -3257,7 +3245,7 @@ References
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-13" class="callout-13-contents callout-collapse collapse">
+<div id="callout-12" class="callout-12-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Zapata-Diomedi B et al. (2017). <em>PLoS ONE</em>, 12(10).<br>
 Danaei G et al. (2009). <em>PLoS Medicine</em>, 6(4).<br>
@@ -3845,7 +3833,7 @@ Murray CJ et al. (2003). <em>Population Health Metrics</em>.</p>
 <span id="cb85-110"><a href="#cb85-110" aria-hidden="true" tabindex="-1"></a><span class="co"># --- PIF formula (Barendregt &amp; Veerman, 2010) ---</span></span>
 <span id="cb85-111"><a href="#cb85-111" aria-hidden="true" tabindex="-1"></a>PIF <span class="ot">&lt;-</span> (p <span class="sc">*</span> (RR <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">-</span> p_cf <span class="sc">*</span> (RR <span class="sc">-</span> <span class="dv">1</span>)) <span class="sc">/</span> (p <span class="sc">*</span> (RR <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">+</span> <span class="dv">1</span>)</span>
 <span id="cb85-112"><a href="#cb85-112" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-113"><a href="#cb85-113" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;PIF =&quot;</span>, <span class="fu">round</span>(PIF, <span class="dv">4</span>), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb85-113"><a href="#cb85-113" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;PIF =&quot;</span>, <span class="fu">round</span>(PIF, <span class="dv">8</span>), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
 <span id="cb85-114"><a href="#cb85-114" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;PIF (%) =&quot;</span>, <span class="fu">round</span>(PIF <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">2</span>), <span class="st">&quot;%</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
 <span id="cb85-115"><a href="#cb85-115" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb85-116"><a href="#cb85-116" aria-hidden="true" tabindex="-1"></a></span>
@@ -3933,7 +3921,7 @@ Murray CJ et al. (2003). <em>Population Health Metrics</em>.</p>
 <span id="cb85-200"><a href="#cb85-200" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb85-201"><a href="#cb85-201" aria-hidden="true" tabindex="-1"></a>**Scenario (PIF = 3.07%):** If inactive people decrease from 17% to 10% — redistributing into low and moderately active categories — 3.07% of IHD burden would be prevented. This is a realistic policy scenario.</span>
 <span id="cb85-202"><a href="#cb85-202" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-203"><a href="#cb85-203" aria-hidden="true" tabindex="-1"></a>**Burden (PAF = 27%):** If everyone were highly active, 27% of IHD deaths would not occur. This is the theoretical maximum preventable fraction — useful for establishing public health importance, not as a policy target.</span>
+<span id="cb85-203"><a href="#cb85-203" aria-hidden="true" tabindex="-1"></a>**Burden (PAF = 27%):** If everyone were highly active, 27% of IHD deaths would not occur (or the burden of physical inactivity for IHD mortality is . %). This is the theoretical maximum preventable fraction — useful for establishing public health importance, not as a policy target.</span>
 <span id="cb85-204"><a href="#cb85-204" aria-hidden="true" tabindex="-1"></a>:::</span>
 <span id="cb85-205"><a href="#cb85-205" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb85-206"><a href="#cb85-206" aria-hidden="true" tabindex="-1"></a>::: {.callout-note collapse=&quot;true&quot;}</span>
@@ -4262,75 +4250,71 @@ Murray CJ et al. (2003). <em>Population Health Metrics</em>.</p>
 <span id="cb85-549"><a href="#cb85-549" aria-hidden="true" tabindex="-1"></a><span class="co"># deaths_baseline = 28</span></span>
 <span id="cb85-550"><a href="#cb85-550" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb85-551"><a href="#cb85-551" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Apply PIF/PAF to baseline deaths ────────────────────────────────────────────</span></span>
-<span id="cb85-552"><a href="#cb85-552" aria-hidden="true" tabindex="-1"></a>deaths_prevented    <span class="ot">&lt;-</span> <span class="fu">round</span>(deaths_baseline <span class="sc">*</span> PIF_scenario, <span class="dv">1</span>)</span>
+<span id="cb85-552"><a href="#cb85-552" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb85-553"><a href="#cb85-553" aria-hidden="true" tabindex="-1"></a>deaths_attributable <span class="ot">&lt;-</span> <span class="fu">round</span>(deaths_baseline <span class="sc">*</span> PAF_tmrel, <span class="dv">1</span>)</span>
-<span id="cb85-554"><a href="#cb85-554" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-555"><a href="#cb85-555" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;── Burden of Disease ──────────────────────────────────────────────</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb85-556"><a href="#cb85-556" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Counterfactual : Everyone highly active (TMREL)</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb85-557"><a href="#cb85-557" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;PAF            :&quot;</span>, <span class="fu">round</span>(PAF_tmrel <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">1</span>), <span class="st">&quot;%</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb85-558"><a href="#cb85-558" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Attributable   :&quot;</span>, deaths_attributable,</span>
-<span id="cb85-559"><a href="#cb85-559" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;IHD deaths/yr attributable to physical inactivity</span><span class="sc">\n\n</span><span class="st">&quot;</span>)</span>
-<span id="cb85-560"><a href="#cb85-560" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-561"><a href="#cb85-561" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;── Scenario Analysis ──────────────────────────────────────────────</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb85-562"><a href="#cb85-562" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Counterfactual : Inactive 17% → 10%; shift to low/moderate active</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb85-563"><a href="#cb85-563" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;PIF            :&quot;</span>, <span class="fu">round</span>(PIF_scenario <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">1</span>), <span class="st">&quot;%</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb85-564"><a href="#cb85-564" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Prevented      :&quot;</span>, deaths_prevented,</span>
-<span id="cb85-565"><a href="#cb85-565" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;IHD deaths/yr prevented by the intervention</span><span class="sc">\n\n</span><span class="st">&quot;</span>)</span>
-<span id="cb85-566"><a href="#cb85-566" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-567"><a href="#cb85-567" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;── The gap ────────────────────────────────────────────────────────</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb85-568"><a href="#cb85-568" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Intervention captures&quot;</span>,</span>
-<span id="cb85-569"><a href="#cb85-569" aria-hidden="true" tabindex="-1"></a>    <span class="fu">round</span>(deaths_prevented <span class="sc">/</span> deaths_attributable <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">1</span>),</span>
-<span id="cb85-570"><a href="#cb85-570" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;% of the total attributable burden</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb85-571"><a href="#cb85-571" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;(&quot;</span>, deaths_prevented, <span class="st">&quot;of&quot;</span>, deaths_attributable, <span class="st">&quot;attributable deaths)</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb85-572"><a href="#cb85-572" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb85-573"><a href="#cb85-573" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-574"><a href="#cb85-574" aria-hidden="true" tabindex="-1"></a>::: callout-tip</span>
-<span id="cb85-575"><a href="#cb85-575" aria-hidden="true" tabindex="-1"></a><span class="fu">## Interpretations</span></span>
-<span id="cb85-576"><a href="#cb85-576" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-577"><a href="#cb85-577" aria-hidden="true" tabindex="-1"></a>**Burden of Disease (PAF = 27%):** Approximately 8 IHD deaths per year are attributable to physical inactivity in this population. This is the theoretical ceiling — comparing current levels to the ideal of everyone being highly active. It is not a realistic policy target, but it establishes the public health importance of the risk factor.</span>
-<span id="cb85-578"><a href="#cb85-578" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-579"><a href="#cb85-579" aria-hidden="true" tabindex="-1"></a>**Scenario Analysis (PIF = 3.07%):** A realistic intervention shifting inactive people toward more active categories would prevent approximately **1 IHD death per year**. The modest effect reflects that: (i) the distributional shift is small; (ii) people shift to adjacent categories, not all the way to highly active; and (iii) a large share of the burden sits with those already partially active.</span>
-<span id="cb85-580"><a href="#cb85-580" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb85-581"><a href="#cb85-581" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-582"><a href="#cb85-582" aria-hidden="true" tabindex="-1"></a>::: callout-important</span>
-<span id="cb85-583"><a href="#cb85-583" aria-hidden="true" tabindex="-1"></a><span class="fu">## The gap is the key teaching point</span></span>
-<span id="cb85-584"><a href="#cb85-584" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-585"><a href="#cb85-585" aria-hidden="true" tabindex="-1"></a>The intervention captures only \~11% of the maximum preventable burden. This motivates why sustained, population-wide activity shifts — rather than small nudges — are needed to make a meaningful dent in attributable burden.</span>
-<span id="cb85-586"><a href="#cb85-586" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb85-587"><a href="#cb85-587" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-588"><a href="#cb85-588" aria-hidden="true" tabindex="-1"></a>testing difference</span>
-<span id="cb85-589"><a href="#cb85-589" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-590"><a href="#cb85-590" aria-hidden="true" tabindex="-1"></a>::: {.callout-note collapse=&quot;true&quot;}</span>
-<span id="cb85-591"><a href="#cb85-591" aria-hidden="true" tabindex="-1"></a><span class="fu">## References</span></span>
-<span id="cb85-592"><a href="#cb85-592" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-593"><a href="#cb85-593" aria-hidden="true" tabindex="-1"></a>Zapata-Diomedi B et al. (2017). *PLoS ONE*, 12(10).\</span>
-<span id="cb85-594"><a href="#cb85-594" aria-hidden="true" tabindex="-1"></a>Danaei G et al. (2009). *PLoS Medicine*, 6(4).\</span>
-<span id="cb85-595"><a href="#cb85-595" aria-hidden="true" tabindex="-1"></a>Murray CJ et al. (2003). *Population Health Metrics*.</span>
-<span id="cb85-596"><a href="#cb85-596" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb85-554"><a href="#cb85-554" aria-hidden="true" tabindex="-1"></a>deaths_prevented    <span class="ot">&lt;-</span> <span class="fu">round</span>(deaths_baseline <span class="sc">*</span> PIF_scenario, <span class="dv">1</span>)</span>
+<span id="cb85-555"><a href="#cb85-555" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-556"><a href="#cb85-556" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;── Burden of Disease ──────────────────────────────────────────────</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb85-557"><a href="#cb85-557" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Counterfactual : Everyone highly active (TMREL)</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb85-558"><a href="#cb85-558" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;PAF            :&quot;</span>, <span class="fu">round</span>(PAF_tmrel <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">1</span>), <span class="st">&quot;%</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb85-559"><a href="#cb85-559" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Attributable   :&quot;</span>, deaths_attributable,</span>
+<span id="cb85-560"><a href="#cb85-560" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;IHD deaths/yr attributable to physical inactivity</span><span class="sc">\n\n</span><span class="st">&quot;</span>)</span>
+<span id="cb85-561"><a href="#cb85-561" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-562"><a href="#cb85-562" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;── Scenario Analysis ──────────────────────────────────────────────</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb85-563"><a href="#cb85-563" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Counterfactual : Inactive 17% → 10%; shift to low/moderate active</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb85-564"><a href="#cb85-564" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;PIF            :&quot;</span>, <span class="fu">round</span>(PIF_scenario <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">1</span>), <span class="st">&quot;%</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb85-565"><a href="#cb85-565" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Prevented      :&quot;</span>, deaths_prevented,</span>
+<span id="cb85-566"><a href="#cb85-566" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;IHD deaths/yr prevented by the intervention</span><span class="sc">\n\n</span><span class="st">&quot;</span>)</span>
+<span id="cb85-567"><a href="#cb85-567" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-568"><a href="#cb85-568" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;── The gap ────────────────────────────────────────────────────────</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb85-569"><a href="#cb85-569" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Intervention captures&quot;</span>,</span>
+<span id="cb85-570"><a href="#cb85-570" aria-hidden="true" tabindex="-1"></a>    <span class="fu">round</span>(deaths_prevented <span class="sc">/</span> deaths_attributable <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">1</span>),</span>
+<span id="cb85-571"><a href="#cb85-571" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;% of the total attributable burden</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb85-572"><a href="#cb85-572" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;(&quot;</span>, deaths_prevented, <span class="st">&quot;of&quot;</span>, deaths_attributable, <span class="st">&quot;attributable deaths)</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb85-573"><a href="#cb85-573" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb85-574"><a href="#cb85-574" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-575"><a href="#cb85-575" aria-hidden="true" tabindex="-1"></a>::: callout-tip</span>
+<span id="cb85-576"><a href="#cb85-576" aria-hidden="true" tabindex="-1"></a><span class="fu">## Interpretations</span></span>
+<span id="cb85-577"><a href="#cb85-577" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-578"><a href="#cb85-578" aria-hidden="true" tabindex="-1"></a>**Burden of Disease (PAF = 27%):** Approximately 8 IHD deaths per year are attributable to physical inactivity in this population. This is the theoretical ceiling — comparing current levels to the ideal of everyone being highly active. It is not a realistic policy target, but it establishes the public health importance of the risk factor and indicates how much of the disease can be attributed to physical inactivity.</span>
+<span id="cb85-579"><a href="#cb85-579" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-580"><a href="#cb85-580" aria-hidden="true" tabindex="-1"></a>**Scenario Analysis (PIF = 3.07%):** A realistic intervention shifting inactive people toward more active categories would prevent approximately **1 IHD death per year**. The modest effect reflects that: (i) the distributional shift is small; (ii) people shift to adjacent categories, not all the way to highly active; and (iii) burden of IHD in 30-34 is relatively small in comparison with other age groups.</span>
+<span id="cb85-581"><a href="#cb85-581" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb85-582"><a href="#cb85-582" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-583"><a href="#cb85-583" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-584"><a href="#cb85-584" aria-hidden="true" tabindex="-1"></a>testing difference</span>
+<span id="cb85-585"><a href="#cb85-585" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-586"><a href="#cb85-586" aria-hidden="true" tabindex="-1"></a>::: {.callout-note collapse=&quot;true&quot;}</span>
+<span id="cb85-587"><a href="#cb85-587" aria-hidden="true" tabindex="-1"></a><span class="fu">## References</span></span>
+<span id="cb85-588"><a href="#cb85-588" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-589"><a href="#cb85-589" aria-hidden="true" tabindex="-1"></a>Zapata-Diomedi B et al. (2017). *PLoS ONE*, 12(10).\</span>
+<span id="cb85-590"><a href="#cb85-590" aria-hidden="true" tabindex="-1"></a>Danaei G et al. (2009). *PLoS Medicine*, 6(4).\</span>
+<span id="cb85-591"><a href="#cb85-591" aria-hidden="true" tabindex="-1"></a>Murray CJ et al. (2003). *Population Health Metrics*.</span>
+<span id="cb85-592"><a href="#cb85-592" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb85-593"><a href="#cb85-593" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-594"><a href="#cb85-594" aria-hidden="true" tabindex="-1"></a>------------------------------------------------------------------------</span>
+<span id="cb85-595"><a href="#cb85-595" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-596"><a href="#cb85-596" aria-hidden="true" tabindex="-1"></a><span class="fu"># Key References {#sec-references .unnumbered}</span></span>
 <span id="cb85-597"><a href="#cb85-597" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-598"><a href="#cb85-598" aria-hidden="true" tabindex="-1"></a>------------------------------------------------------------------------</span>
+<span id="cb85-598"><a href="#cb85-598" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Barendregt JJ &amp; Veerman JL. (2010). Categorical versus continuous risk factors and the calculation of potential impact fractions. *Journal of Epidemiology and Community Health*, 64(3):209. <span class="ot">&lt;https://doi.org/10.1136/jech.2009.090274&gt;</span></span>
 <span id="cb85-599"><a href="#cb85-599" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-600"><a href="#cb85-600" aria-hidden="true" tabindex="-1"></a><span class="fu"># Key References {#sec-references .unnumbered}</span></span>
+<span id="cb85-600"><a href="#cb85-600" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Murray CJ, Ezzati M, Lopez AD et al. (2003). Comparative quantification of health risks: Conceptual framework and methodological issues. *Population Health Metrics*. <span class="ot">&lt;http://www.pophealthmetrics.com/content/1/1/1&gt;</span></span>
 <span id="cb85-601"><a href="#cb85-601" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-602"><a href="#cb85-602" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Barendregt JJ &amp; Veerman JL. (2010). Categorical versus continuous risk factors and the calculation of potential impact fractions. *Journal of Epidemiology and Community Health*, 64(3):209. <span class="ot">&lt;https://doi.org/10.1136/jech.2009.090274&gt;</span></span>
+<span id="cb85-602"><a href="#cb85-602" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Zapata-Diomedi B et al. (2017). A shift from motorised travel to active transport: What are the potential health gains for an Australian city? *PLoS ONE*, 12(10). <span class="ot">&lt;https://doi.org/10.1371/journal.pone.0184799&gt;</span></span>
 <span id="cb85-603"><a href="#cb85-603" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-604"><a href="#cb85-604" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Murray CJ, Ezzati M, Lopez AD et al. (2003). Comparative quantification of health risks: Conceptual framework and methodological issues. *Population Health Metrics*. <span class="ot">&lt;http://www.pophealthmetrics.com/content/1/1/1&gt;</span></span>
+<span id="cb85-604"><a href="#cb85-604" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Danaei G et al. (2009). The preventable causes of death in the United States. *PLoS Medicine*, 6(4). <span class="ot">&lt;https://doi.org/10.1371/journal.pmed.1000058&gt;</span></span>
 <span id="cb85-605"><a href="#cb85-605" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-606"><a href="#cb85-606" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Zapata-Diomedi B et al. (2017). A shift from motorised travel to active transport: What are the potential health gains for an Australian city? *PLoS ONE*, 12(10). <span class="ot">&lt;https://doi.org/10.1371/journal.pone.0184799&gt;</span></span>
+<span id="cb85-606"><a href="#cb85-606" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Wanjau MN et al. (2023). Health and economic impact of obesity interventions in Kenya. *Cost Effectiveness and Resource Allocation*, 21(1). <span class="ot">&lt;https://doi.org/10.1186/s12962-023-00467-3&gt;</span></span>
 <span id="cb85-607"><a href="#cb85-607" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-608"><a href="#cb85-608" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Danaei G et al. (2009). The preventable causes of death in the United States. *PLoS Medicine*, 6(4). <span class="ot">&lt;https://doi.org/10.1371/journal.pmed.1000058&gt;</span></span>
+<span id="cb85-608"><a href="#cb85-608" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Mizdrak A, Tatah L, Mueller N, Shaw C, Woodcock J. (2023). Assessing health impacts of changes in active transport. *Journal of Transport &amp; Health*, 33, 101702.</span>
 <span id="cb85-609"><a href="#cb85-609" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-610"><a href="#cb85-610" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Wanjau MN et al. (2023). Health and economic impact of obesity interventions in Kenya. *Cost Effectiveness and Resource Allocation*, 21(1). <span class="ot">&lt;https://doi.org/10.1186/s12962-023-00467-3&gt;</span></span>
+<span id="cb85-610"><a href="#cb85-610" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Preston SH, Heuveline P, Guillot M. (2001). *Demography: Measuring and Modeling Population Processes*. Blackwell.</span>
 <span id="cb85-611"><a href="#cb85-611" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-612"><a href="#cb85-612" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Mizdrak A, Tatah L, Mueller N, Shaw C, Woodcock J. (2023). Assessing health impacts of changes in active transport. *Journal of Transport &amp; Health*, 33, 101702.</span>
+<span id="cb85-612"><a href="#cb85-612" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Global Burden of Disease Results Tool: <span class="ot">&lt;https://vizhub.healthdata.org/gbd-results/&gt;</span></span>
 <span id="cb85-613"><a href="#cb85-613" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-614"><a href="#cb85-614" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Preston SH, Heuveline P, Guillot M. (2001). *Demography: Measuring and Modeling Population Processes*. Blackwell.</span>
+<span id="cb85-614"><a href="#cb85-614" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>drpa R package: <span class="ot">&lt;https://meta-analyses.github.io/drpa/drpa.html&gt;</span></span>
 <span id="cb85-615"><a href="#cb85-615" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-616"><a href="#cb85-616" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Global Burden of Disease Results Tool: <span class="ot">&lt;https://vizhub.healthdata.org/gbd-results/&gt;</span></span>
-<span id="cb85-617"><a href="#cb85-617" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-618"><a href="#cb85-618" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>drpa R package: <span class="ot">&lt;https://meta-analyses.github.io/drpa/drpa.html&gt;</span></span>
-<span id="cb85-619"><a href="#cb85-619" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb85-620"><a href="#cb85-620" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Interactive dose-response tool: <span class="ot">&lt;https://shiny.mrc-epid.cam.ac.uk/meta-analyses-physical-activity/&gt;</span></span>
+<span id="cb85-616"><a href="#cb85-616" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Interactive dose-response tool: <span class="ot">&lt;https://shiny.mrc-epid.cam.ac.uk/meta-analyses-physical-activity/&gt;</span></span>
 </code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

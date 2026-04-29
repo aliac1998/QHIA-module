@@ -194,7 +194,7 @@ cat("PAF (%) =", round(PAF_tmrel * 100, 2), "%\n")
 
 **Scenario (PIF = 3.07%):** If inactive people decrease from 17% to 10% — redistributing into low and moderately active categories — 3.07% of IHD burden would be prevented. This is a realistic policy scenario.
 
-**Burden (PAF = 27%):** If everyone were highly active, 27% of IHD deaths would not occur. This is the theoretical maximum preventable fraction — useful for establishing public health importance, not as a policy target.
+**Burden (PAF = 27%):** If everyone were highly active, 27% of IHD deaths would not occur (or the burden of physical inactivity for IHD mortality is . %). This is the theoretical maximum preventable fraction — useful for establishing public health importance, not as a policy target.
 :::
 
 ::: {.callout-note collapse="true"}
@@ -523,8 +523,9 @@ $$
 # deaths_baseline = 28
 
 # ── Apply PIF/PAF to baseline deaths ────────────────────────────────────────────
-deaths_prevented    <- round(deaths_baseline * PIF_scenario, 1)
+
 deaths_attributable <- round(deaths_baseline * PAF_tmrel, 1)
+deaths_prevented    <- round(deaths_baseline * PIF_scenario, 1)
 
 cat("── Burden of Disease ──────────────────────────────────────────────\n")
 cat("Counterfactual : Everyone highly active (TMREL)\n")
@@ -548,16 +549,11 @@ cat("(", deaths_prevented, "of", deaths_attributable, "attributable deaths)\n")
 ::: callout-tip
 ## Interpretations
 
-**Burden of Disease (PAF = 27%):** Approximately 8 IHD deaths per year are attributable to physical inactivity in this population. This is the theoretical ceiling — comparing current levels to the ideal of everyone being highly active. It is not a realistic policy target, but it establishes the public health importance of the risk factor.
+**Burden of Disease (PAF = 27%):** Approximately 8 IHD deaths per year are attributable to physical inactivity in this population. This is the theoretical ceiling — comparing current levels to the ideal of everyone being highly active. It is not a realistic policy target, but it establishes the public health importance of the risk factor and indicates how much of the disease can be attributed to physical inactivity.
 
-**Scenario Analysis (PIF = 3.07%):** A realistic intervention shifting inactive people toward more active categories would prevent approximately **1 IHD death per year**. The modest effect reflects that: (i) the distributional shift is small; (ii) people shift to adjacent categories, not all the way to highly active; and (iii) a large share of the burden sits with those already partially active.
+**Scenario Analysis (PIF = 3.07%):** A realistic intervention shifting inactive people toward more active categories would prevent approximately **1 IHD death per year**. The modest effect reflects that: (i) the distributional shift is small; (ii) people shift to adjacent categories, not all the way to highly active; and (iii) burden of IHD in 30-34 is relatively small in comparison with other age groups.
 :::
 
-::: callout-important
-## The gap is the key teaching point
-
-The intervention captures only \~11% of the maximum preventable burden. This motivates why sustained, population-wide activity shifts — rather than small nudges — are needed to make a meaningful dent in attributable burden.
-:::
 
 testing difference
 
